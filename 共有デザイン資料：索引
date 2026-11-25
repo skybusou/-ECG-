@@ -45,3 +45,27 @@ SHA-256: 13bf5b5cf4ead7f9110802b210fa5e7940543778bbcc5fd118e827ccbb293b61
 Keywords: card game, カードゲーム, 百響札, 千響札, 万響札, game design, ECG
 
 SHA-256: e3c5aa0ef52d0c2825b4533dd7770add66b14b1e2e06e7ce1dbf10dabeca3f9f
+
+## 『万響札』基本セット[ver.8.6.5]
+
+拡張型カードゲーム（ECG）『万響札』の基本セット現行正本。5属性（攻撃・防御・追加・対策・変化）のルール全文。
+
+Keywords: 万響札, card game, カードゲーム, ECG, game design
+
+SHA-256: 56e6763dd0e7f37ea21240e5443c07885d4ded7c2122dfeba61fe70c70afbe30
+
+## 『万響札』属性変更パック（最新版）
+
+属性変更の拡張パック群の現行版。《溜撃》[ver.4.3]、《重鎧》[ver.3.2]、《腐蝕》[ver.4.2]。
+
+Keywords: 万響札, 属性変更, card game, expansion
+
+SHA-256: 溜撃 1c55d5471c3871adc716e9939d003875eb131f113c8e5e6c638f848372149a03／重鎧 d6cb86c3f3073b21226ff83aba4e2b57e69755d745ebae331d0ab308bc67af45／腐蝕 b797ac7adff4b08fd01e3186579c51f313fe8941d8a873090f6c83990f668ed4
+
+## 『百響札』現行セット
+
+『万響札』のCPU戦向け改変版『百響札』の現行セット。本体[ver.4.9]（3属性・HP13）、拡張属性《相棒》[ver.7.1]、《爆弾》[ver.4.3]、統合版（相棒×爆弾）[ver.1.6]、『百響札×溜撃』[ver.1.5]、『百響札×溜撃×重鎧』[ver.2.1]（47種59枚）。
+
+Keywords: 百響札, 万響札, card game, カードゲーム, CPU対戦, game design
+
+SHA-256: 本体 fcacb90a7a634d72f26f5eca0a6ee029dacc52dd099c9e11fdac58ef1bc45621／相棒 d5252a56156c8bababe476137d17e13aba062a20bb09d2c69d5dc4428ec29ce0／爆弾 126e1ff182cd869abff2542df5ca9d1a7b2e9cb355c506a9963807c21aa9a3a2／統合版 462b1a8de0b79468ec325cbf57c79f5c70d9362b2070787ac46453f09706b66b／×溜撃 bea614aaf8e1b692810d070e70668f929a7df644b99b1cfdcbe745d3fdf526d2／×溜撃×重鎧 c45a890aa47a9cc226c0a8ca77d06e28b829a3377dd3be2c7f0bc71de6a94544
