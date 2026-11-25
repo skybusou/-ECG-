@@ -1,0 +1,23 @@
+# 共有デザイン資料：索引 / Shared Game-Design Documents
+
+この索引は、ゲームデザインの共有知財として公開する資料のための案内である。各資料は単体で流用・応用できる形で置かれている。
+
+This index introduces game-design documents published as shared intellectual property. Each document is self-contained and reusable.
+
+## 『サイコロ振り』[ver.2.4]
+
+2人以上（基本3人）で遊ぶサイコロ収集ゲームのルールブック。各プレイヤーはサイコロ1個を持ち、同時に振って、1〜6の全ての数字を自分の記録に揃えたプレイヤーが勝つ。「振らない選択」をすると、そのラウンドに現れる数を2つ予想でき、当たれば獲得や相手の数字の消去が起きる。予想の読み合いが核のデザイン。
+
+単体の勝敗ゲームとしてだけでなく、親ゲームに組み込む「リソース獲得ミニゲーム」のモジュールとしても利用できる（同時完成による決着を、資源の獲得量に読み替える）。
+
+Keywords: dice game, サイコロ, ダイスゲーム, ゲームデザイン, game design, module, 同時解決, 読み合い
+
+SHA-256: c99e5fecf40229bf03e4e8f2c21de9bc99790e82b2cf7f619bdbe16090c56dcd
+
+## 『要素：技術：サイコロ』
+
+4d6（6面ダイス4個）の合計分布（4〜24、期待値・最頻値14）を核にした、TRPG向けの判定システム。14＝失敗（失敗核）、24＝絶対成功、4＝絶対失敗（一時退場）とし、成功を分布の両端の帯に置く。確率の帯を色で示し、ダイスロールを「そのキャラクターの調子」として読む設計。技能ランクは「範囲×補正」の形で表す。敵のマイナス技能の分析、AIを演者・ユーザーをGMとするチャットTRPGの遊び方の整理と試遊記録を含む。
+
+Keywords: 4d6, TRPG, dice system, ダイス, 判定システム, probability distribution, 確率分布, tabletop RPG, game design
+
+SHA-256: 12ebea5c09a817d00ed4f91b2f8faeaf979516cca5502f9273722946bad928c2
