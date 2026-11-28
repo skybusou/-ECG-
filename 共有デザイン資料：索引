@@ -101,3 +101,19 @@ SHA-256: 3ab52e3bca69c541e62a0fc69632463f2c06d85e5e17e3047b119369f7376906
 Keywords: 千響札, 万響札, 錬成, 供物, card game, カードゲーム, game design, ECG
 
 SHA-256: 1b99c0a2b771cab9148ea9b8200cf3adbec9e264805436a7f93d28c4214fc468
+
+## 『千響札×錬成×供物シミュレーター』（HTML）
+
+『千響札×錬成×供物』[ver.1.7] 仕様の単体HTMLシミュレーター（静的版）。人対CPU・CPU自動対戦・対戦ログ・対戦データの書き出しと読み込みに対応する。単体ファイルで、そのままブラウザで開いて遊べる。
+
+Keywords: 千響札, 万響札, 錬成, 供物, simulator, シミュレーター, card game, カードゲーム, HTML, game design, ECG
+
+SHA-256: dcfbc9b54a4b61d3ab63edad0f72ff8a4fd126cdec51fd89d413a97340c37359
+
+## 『千響札アニメーション実験場』（HTML）
+
+『千響札』の基本6種（攻撃・溜撃・防御・重鎧・対策・腐蝕）を使い、アニメーションと効果音の見え方・聞こえ方を実験する砂場。場のカードはシンボルのロゴ画像とカード名だけで表示され、両者が交互に1枚ずつ出して処理する。単体ファイルで、そのままブラウザで開ける。
+
+Keywords: 千響札, 万響札, アニメーション, animation, SE, 効果音, UI, 実験場, card game, game design
+
+SHA-256: 472a7a98d349ff0f9e6919d6cbae4cf13209b019a3dd5d7c2372620df1d6bb6c
