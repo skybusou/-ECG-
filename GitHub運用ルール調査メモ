@@ -1,0 +1,95 @@
+# GitHub運用ルール調査メモ - 2026-11-28
+
+作成: 2026-11-28 13:56 JST。きっかけは同日 13:55 JST の本人の言葉。「現在は一つの認証の度に私が決定を押した。ただ、運用した限り、いくつかのセクションに分けられると考えた。ただし、それは私の考えで、甘い点もあり得る。そして似たように考えて、自動化をしたいけど、自動化をする上での注意点をまとめたいと考えてる人は多いはずだ」。
+
+## 本人の現在の運用（確認済みの事実）
+
+- 2026-11-26 の委任: GitHub には独自の堅牢性（変更履歴等）があり、その堅牢性を阻害しない限り、本人の GitHub に関しては Muse が自由に扱ってよい。認証・承認が必要な項目は助手がリスト化して提示し、本人がリストの確認でアクセスを決定する。
+- 2026-11-26 の追加運用: push のたびに承認確認が発生するので、GitHub への掲載は小刻みにせず、版の完成など切りが良い時にまとめて行う。
+- 2026-11-28 の追加整理: 本人が「GitHub に載せても良い」と言った場合は、助手が先に掲載するもののリストを本人に見せ、本人の確認の後に、一括で載せる方式とする。
+- 2026-11-28 の方針: 「これからは、基本的には github の活用が望まれる」。理由は多種多様の変更が続くことと、ここから必要なデータが急速に増える見込みであること。対象の例はロゴ、砂場、シミュレーターなどの資産。
+- 2026-11-28 13:55 JST: 画像のデータは送れなくても良い。少しでも GitHub に載せられたら、それだけミューの仕事が減る、という本人の考え。
+- 2026-11-26 に GitHub コネクタの OAuth 接続とリポジトリ選択を完了し、書き込み系ツールが利用可能。実際の書き込み操作は都度承認制。
+- 掲載済みの例: 『千響札×錬成×供物』ver.1.5 を -ECG- リポジトリに掲載、コミット 2659c882。ver.1.6 と ver.1.7 は未掲載。
+
+## 外部で見つかった整理（出典つき）
+
+### 1. 最小権限とトークンの選び方
+
+- GitHub 公式の推奨は、可能なら classic PAT ではなく fine-grained PAT を使うこと。GitHub App は fine-grained な権限と短命なトークンを使い、ユーザーに紐づかないため、ユーザーが組織を離れても動き続ける。
+  出典: https://docs.github.com/en/actions/concepts/security/secrets
+  出典: https://docs.github.com/en/rest/authentication/authenticating-to-the-rest-api?apiversion=2022-11-28
+- AI エージェント向けの実務記事の結論も同じ方向: GitHub App を対象リポジトリだけに絞り、短命な installation token（最長1時間）を使い、秘密はシークレットマネージャーに置き、監査ログを残す。広くて長命な PAT は避ける。
+  出典: https://www.aisecall.com/blog/posts/2026-10-20-zero-trust-walkthrough-giving-coding-ai-agent-github-access
+  出典: https://www.aisecall.com/blog/posts/2026-10-10-grant-coding-ai-agent-github-access-least-privilege
+- 個人の小規模な運用なら fine-grained PAT で十分で、webhook 駆動の自動化や複数リポジトリの orchestration が要る時に GitHub App を使う、という整理もある。
+  出典: https://www.aisecall.com/blog/posts/2026-10-10-grant-coding-ai-agent-github-access-least-privilege
+
+### 2. ブランチ保護と CODEOWNERS（人の承認を仕組みにする）
+
+- 定石は、main への直接 push を禁止し、プルリクエスト経由にする。承認数、ステータスチェックの通過、会話の解決、force push の禁止、bypass 権限の制限を組み合わせる。
+  出典: https://www.aimadetools.com/blog/7-github-features-most-devs-never-use/
+  出典: https://swarmz.net/blog/how-to-set-up-branch-protection-for-an-ai-coding-agent
+- 見落としやすい点: 古典的なブランチ保護は既定ではリポジトリ管理者には適用されない。管理者（＝本人のトークンで動くエージェント）にも適用させるには「Do not allow bypassing the above settings」を入れること。ruleset では bypass リストにエージェントを入れないこと。
+  出典: https://www.rightshold.com/answers/how-to-require-ai-agent-commits-to-go-through-pull-requests
+- CODEOWNERS は、危険なパスだけ特定のレビューアを必須にする仕組み。設定だけでは通知に留まり、ruleset で code owner review を必須にして初めて強制になる。
+  出典: https://www.aimadetools.com/blog/7-github-features-most-devs-never-use/
+  出典: https://gophertrunk.org/learn/git/branch-protection/
+- 承認が形だけになると安全にはならない、という留保も複数の記事が明記している。ブランチ保護はコードをレビューしてくれない。
+  出典: https://swarmz.net/blog/how-to-set-up-branch-protection-for-an-ai-coding-agent
+
+### 3. 自動化（Actions）の安全な始め方
+
+- ワークフローのトークンは既定で読み取り専用から始め、書き込みが必要なジョブだけ明示的に上げる。トップレベルの permissions は contents: read にする。
+  出典: https://docs.ozarksecuritylabs.com/supply-chain/tier-1-baseline/minimal-permissions/
+  出典: https://www.aimadetools.com/blog/7-github-features-most-devs-never-use/
+- まず読み取り専用のレビューから始め、書き込みはワークフロー1つずつ足す。エージェントが書いたものは人がレビューしてマージする。実行時間と支出に上限を付ける。
+  出典: https://www.luminaryera.com/blog/ai-coding-agents-in-ci-github-actions-guide
+- 環境（environment）でデプロイと承認を分ける。production 環境に required reviewers を置けば、CI が通ることとデプロイの許可が別になる。環境シークレットは承認があるまでジョブから見えない。
+  出典: https://www.aimadetools.com/blog/7-github-features-most-devs-never-use/
+  出典: https://docs.github.com/en/actions/concepts/security/secrets
+- 注意点として、issue や PR コメントの文面は信頼できない入力として扱うこと。エージェントが読むテキストに書かれた指示と、本人の指示を区別できない、という指摘がある。
+  出典: https://www.luminaryera.com/blog/ai-coding-agents-in-ci-github-actions-guide
+  出典: https://www.buildingsoftware.ai/directing-agents/orchestration-and-guardrails/
+- 問いの立て方として有用な基準: 「エージェントが今の権限で取り得る最悪の行動は何か、それに耐えられるか」。信頼できるほどエージェントを賢くするのではなく、到達範囲を絞る。
+  出典: https://www.buildingsoftware.ai/directing-agents/orchestration-and-guardrails/
+
+## 本人の運用への当てはめ（叩き台のセクション分け）
+
+本人の「いくつかのセクションに分けられる」という考えに、外部の整理を重ねた叩き台。決定ではなく、本人の判定待ち。
+
+- 第1セクション「読むだけ」: 閲覧、検索、読み戻し確認。承認は要らない。現在の委任の範囲内。
+- 第2セクション「下書きを作る」: ローカルでの文書作成、ブランチへの追加、プルリクエストの作成まで。main には触れない。承認はマージの時にまとめて1回。
+- 第3セクション「版の公開」: main への push、索引の更新。版の完成など切りが良い時に、掲載リストを先に見せて確認を受けてから一括で行う。2026-11-28 の本人の整理そのまま。
+- 第4セクション「戻せない操作」: 削除、履歴の書き換え（force push、rebase の公開分）、公開範囲の変更、設定・権限の変更、リポジトリの削除。常にその都度の明示的な承認。自動化の対象にしない。
+- 第5セクション「自動化」: Actions など。読み取り専用から始め、書き込みは1ワークフローずつ。トークンは対象リポジトリだけに絞り、短命にする。実行時間と回数に上限を付ける。
+
+## 「甘い点」として点検すべき箇所（本人の自己点検への応答）
+
+- 履歴があるから戻せる、という前提は force push や削除では崩れる。堅牢性の根拠は「履歴が残ること」なので、第4セクションを自動化から外すことが、その根拠を守る条件になる。
+- 1人だけのリポジトリでは、必須レビューも CODEOWNERS も、承認するのが本人自身になる。仕組み上の承認と実質の確認が同じ人になるため、形だけの承認になりやすい。防ぐには、承認の時に差分の一覧（何を載せるか、のリスト）を必ず見る、という第3セクションの運用が実質の防波堤になる。
+- 現在の OAuth 接続のトークンの権限範囲（scope）は、このメモの調査では確認していない。fine-grained か classic か、対象リポジトリがどれか、admin 権限を含むかは未確認。セクション分けを決める前に確認が必要な項目として残す。
+- ブランチ保護が現在 -ECG- リポジトリ等に入っているかも未確認。入っていないなら、第3セクションの「リストを見せて一括 push」は運用上の約束に留まり、仕組み上の強制にはなっていない。
+- 公開リポジトリではブランチ保護は GitHub Free でも使えるが、環境の required reviewers など一部の保護はプランによる制限がある。出典の注記: https://docs.github.com/en/rest/deployments/environments
+
+## 未確認のまま残す項目（配信側での確認が必要）
+
+1. 現在の GitHub 接続のトークン種別と権限範囲、対象リポジトリ。
+2. skybusou/-ECG- など対象リポジトリの main にブランチ保護・ruleset が入っているか。
+3. 画像（ロゴ・アイコン8種）の掲載経路。テキスト経路では送れないことが 2026-11-28 に判明済みで、本人は送れなくて良いとしている。
+4. シミュレーターと砂場の HTML 2件の掲載は、メインの会話で進行中（2026-11-28 13:54 JST 時点）。このメモはその作業と重ねないこと。
+
+## 出典一覧（本文中の URL と同じもの）
+
+- https://docs.github.com/en/actions/concepts/security/secrets
+- https://docs.github.com/en/rest/authentication/authenticating-to-the-rest-api?apiversion=2022-11-28
+- https://www.aisecall.com/blog/posts/2026-10-20-zero-trust-walkthrough-giving-coding-ai-agent-github-access
+- https://www.aisecall.com/blog/posts/2026-10-10-grant-coding-ai-agent-github-access-least-privilege
+- https://www.aimadetools.com/blog/7-github-features-most-devs-never-use/
+- https://swarmz.net/blog/how-to-set-up-branch-protection-for-an-ai-coding-agent
+- https://www.rightshold.com/answers/how-to-require-ai-agent-commits-to-go-through-pull-requests
+- https://gophertrunk.org/learn/git/branch-protection/
+- https://docs.ozarksecuritylabs.com/supply-chain/tier-1-baseline/minimal-permissions/
+- https://www.luminaryera.com/blog/ai-coding-agents-in-ci-github-actions-guide
+- https://www.buildingsoftware.ai/directing-agents/orchestration-and-guardrails/
+- https://docs.github.com/en/rest/deployments/environments

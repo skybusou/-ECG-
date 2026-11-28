@@ -1,0 +1,200 @@
+# アニメーション／演出 調査ブリーフ（カードゲームWeb UI向け）
+
+作成：2026-11-28
+目的：ブラウザで動くカードゲームシミュレーター（単一HTML＋JavaScript）にアニメーション演出を追加するための既存指南の整理。最初の適用対象は「盾の提供の視覚化」。
+方針との関係：起きたことを文字ログで読ませるのではなく、起きる様子そのものを見せる。
+
+※凡例：＝出典で確認できた内容。＝出典を踏まえた本ブリーフ筆者による適用案（推測を含む）。
+※桜井チャンネルの要点は、公式動画そのものではなく有志の要約記事経由で確認したものを含む。その旨を各所に明記する。
+
+---
+
+## 1. 桜井政博「ゲーム作るには」の演出・アニメーション関連
+
+チャンネル「桜井政博のゲーム作るには」（YouTube、2022年8月開始、2024年10月最終回、250本以上）は全動画がカテゴリ分けされており、演出まわりは主に次のカテゴリに分布する（出典：comicommunity のカテゴリ一覧、hikitomori の感想記事）。
+
+- D…プレイヤーへのフィードバックの細部
+- G…キャラクターの動きの作り方
+- H…演出効果の使い方
+- I…音が体験に与える効果
+- J…画面表示の分かりやすさ
+
+### 個別動画と要点
+
+- **「大事なところはストップ!」**
+ヒットストップ（攻撃が当たった瞬間にほんの一瞬ゲームを止める演出）の回。「当たった感」「倒した感」という体感に直結する要素を「仕様」として扱う。ストップ演出には段階がある：そのまま／止め／止め＋振動／止め＋振動＋スロー。敵を倒した際の大きなストップは桜井氏の造語で「ボスストップ」（ファミコン『星のカービィ 夢の泉の物語』から使用）。
+出典：note記事「大事なところはストップ!｜桜井政博のゲーム作るには実践チャレンジ1日目」 https://note.com/matchima2/n/n435a2b0f151f （動画埋め込みID: APOD1fmwPaM）
+
+- **「攻撃モーションの内訳」**
+攻撃モーションを「待機・構え・攻撃・フォロースルー」の4つに分ける。待機は全ての原点でぶらさない。構えは予備動作・ため。攻撃は判定が出た瞬間のポーズがビシッと決まることが最重要。フォロースルーは後隙（待機に戻る時間）で、完全に戻る前から動ける「キャンセルフレーム」を設定する。
+出典：senkohome 要約「モーション」 https://senkohome.com/sakurai-game-dev-motion/
+
+- **「フォロースルーで印象が決まる」**
+標準的な攻撃は全体1秒未満で、攻撃が発生するのは全体時間の最初の1/3〜1/4（早ければ1/5）ほど。残りの大半はフォロースルー。攻撃自体は一瞬で終わるため、フォロースルーで「その前に何をしていたか」を伝える必要がある。ただ補間で待機に戻すのではなく、許容ギリギリまで粘り、気持ち長めに表現する。
+出典：同上 senkohome 要約
+
+- **「モーション指定の仕方」**
+まず全モーションをテキストで書き出す「モーションリスト」を作り、動きのイメージ・モーションの長さ・攻撃発生までの時間を記載する。その上で肝となるポーズ（待機・移動・攻撃）をフィギュア写真で指定する（1ファイターあたり70〜80枚前後）。原則は「やり過ぎてちょうど」：小さい画面の小さい動きだから、ぐっとやりすぎてちょうどいい。
+出典：同上 senkohome 要約
+
+- **「かまえは瞬時に極端に」**
+構え（ボタンを押してから攻撃が出るまでのポーズ）は、押した瞬間から大きくポーズが変わるのがスマブラ流。レスポンス重視で、入力を受け付けたらすぐ反応を返す。一方で構えがほぼ無い攻撃（1フレームで飛び出す弱攻撃）も成立する。ただし「ため」が無いと強く攻撃した印象に欠ける。
+出典：同上 senkohome 要約
+
+- **ダメージモーションについて**
+ダメージを受けた瞬間、すぐ痛そうなポーズへ置き換わる。ダメージモーションの1フレーム目はヒットストップで長く見えるので、ここを「痛そう」に見せることが大事。待機とは全然違う極端なポーズで、遠くから見てもダメージを受けたと分かるようにする。
+出典：同上 senkohome 要約
+
+- **「エフェクトをスローで見てみよう」**、**「音はフィクション、ノンフィクション」**、**「遅さは罪」**
+タイトルとカテゴリの存在を確認（出典：hikitomori 感想記事の目次 https://hikitomori.com/sakuraimasahiro-gamewotukuruniha-kansou ）。「遅さは罪」は、操作している実時間を意識し「なんにも遊ばせていない時間」を申し訳ないとする姿勢が引用されている（同記事内の引用）。
+
+- **手応えの切り分け順（二次情報）**
+有志のAI要約スキル経由の整理では、手応えが弱いときは「①当たった瞬間を止める（ヒットストップ）→②当たった所に印を出す（ヒットマーク）→③効果音の出だしを強くする→④画面の揺れと光→⑤構えの素早さと当たった瞬間のポーズ」の順に疑う、とされる。非公式の要約であり、原動画での確認が望ましい。
+出典：AIみちくさch「桜井政博さんの『ゲーム作るには』をAIスキルに」 https://ai-michikusa.com/?p=4657
+
+モーションカテゴリのまとめ動画（YouTube）： https://www.youtube.com/watch?v=W1Qfqa2G1Cc （senkohome 要約ページ内の埋め込みより）
+
+---
+
+## 2. 制作の段階・手順と、ジュース／game feel の古典
+
+### 2-1. モーション制作の標準工程
+
+アニメーション制作の一般的な流れ（CGWorld連載「流流とはじめる、簡単リグ＆モーション制作」第7〜8回より）：
+
+1. **リファレンス収集・確認** … 実写動画などをタイムラインと同期して見る
+2. **ラフ制作** … キーポーズの選定（重心移動・接地の変化・大きなシルエット変化のタイミングで拾う）
+3. **ブロッキング** … キーポーズをベースに動きの骨組みを作る（ステップ補間で確認）
+4. **タイミング調整** … キーポーズのフレーム位置を動かして心地よいタイミングを探る
+5. **スプライニング（本制作）** … 補間を滑らかにし、ディティールを加える。ブロッキングの印象（キレ・タイミング）を失わないよう見比べる
+6. **ポリッシュ（つくり込み）** … 細部を整える。違和感が残るならブロッキングやスプライニングに戻って見直す
+
+出典：CGWorld https://cgworld.jp/regular/202601-rururig-08.html
+
+桜井氏のモーション指定も同じ型で、工程の最上流に「モーションリスト（テキストで全モーション＋長さ＋発生時間を書き出す）」と「キーポーズ指定」を置く（1章「モーション指定の仕方」参照）。つまり **(a) 言葉で全動きを列挙 → (b) キーポーズで骨格 → (c) タイミング → (d) 滑らかさと細部** の順が、映像アニメーションとゲームモーションで共通する段階論。
+
+### 2-2. ディズニー「アニメーションの12原則」から関係の深いもの
+
+Frank Thomas と Ollie Johnston『The Illusion of Life』（1981）の12原則のうち、本件に直結するもの（出典：CLIP STUDIO 解説 https://www.clipstudio.net/oekaki/archives/174900 、note/KDP解説 https://note.com/kdp_2019/n/na07dce9c04f9 ）：
+
+- **予備動作（Anticipation）** … 本動作の前に逆方向の「溜め」を入れ、観客に次に起こることを予測させる
+- **スローイン／スローアウト（Slow In and Slow Out）** … 動きの加速・減速（Webのeasingに相当）
+- **潰しと伸ばし（Squash and Stretch）** … 重さ・柔らかさを変形で表す
+- **フォロースルーとオーバーラッピング（Follow Through and Overlapping）** … 本体が止まった後も付属部分が余韻で動き続ける。「何もかもが一度に止まることはない」
+- **副次アクション（Secondary Action）** … 主動作を引き立てる補助の動き
+- **演出（Staging）** … 伝えたいことが一目で伝わる画面構成
+
+### 2-3. ジュース／game feel の古典
+
+- **Steve Swink『Game Feel: A Game Designer's Guide to Virtual Sensation』（2009）** … game feel の定番書。出典：datafield.dev Further Reading https://datafield.dev/video-game-design/part-02/chapter-08/further-reading.html
+- **Martin Jonasson & Petri Purho「Juice It or Lose It」（2012）** … 「juice」という語を広めた講演。juiceとは「最小の入力に対して最大のフィードバック」を返す、誇張された視聴覚フィードバックの層。出典：GameDesign.gg 用語集 https://gamedesign.gg/glossary/juice/
+- **Jan Willem Nijman（Vlambeer）「The Art of Screenshake」（2013、INDIGO Classes）** … 素朴なシューターに演出を1つずつ足していくだけで（仕組みは無変更のまま）商業級の手触りに変える実演。足す順序の例：永久に残る残骸 → 爆発を大きく → 着弾エフェクト → 画面シェイク → マズルフラッシュ → 画面停止（ヒットストップ）→ カメラの追従（lerp）→ カメラキック → 反動 → 敵のヒットフラッシュ → スリープ（撃破時の短い停止）→ ノックバック → 速度線 → 出現のトゥイーン → 効果音のピッチのランダム化。合言葉は「Every action needs reaction. Bigger reactions for bigger actions.」
+出典：GameDesign.gg 用語集、artificials.ch の30テクニック整理 https://artificials.ch/juice-up-your-game/ 、JAKESJAM の game-feel-juice スキル（GitHub） https://github.com/jbotsd/jakesjam/blob/HEAD/.claude/skills/game-feel-juice/SKILL.md
+- **実装上の分離原則** … 「シミュレーションと演出を分ける。フィードバック（揺れ・トゥイーン・粒子・フラッシュ）はゲームの結果を決して変えない（見た目だけ）」。これにより演出を自由に積み増しできる。出典：game-feel-juice リファレンス（Hugging Face ミラー） https://huggingface.co/CrashOverrideX/Quillan-Ronin/blob/main/09%20-%20Projects/projects/Motherload%20zip%20find/.grok/skills/building-games/references/game-feel-juice.md
+- **イベント駆動の組み立て** … 打撃感は「時間（止める）・相手（のけぞる）・カメラ（揺れる）・光と粒・数字・音」の反応を **当たった同じ瞬間に** 重ねて作る。実装のコツは、判定処理から「当たった」という出来事（イベント）を1つ発行し、止める・揺らす・光らせる・鳴らす処理がそれぞれそのイベントを受け取って動く形にすること（効果の足し引き・調整が容易になる）。出典：iroirotool「ゲームの手触り その3 — 打撃感」 https://iroirotool.com/knowledge/game_dev/game_feel_3.html
+- **ヒットストップの目安** … 通常ヒットで約2〜6フレーム（30〜120ms程度）。長すぎるとモタつきに感じる。出典：同 game-feel-juice リファレンス、iroirotool その3
+
+---
+
+## 3. Web（CSS/JavaScript）でのカードゲームUIアニメーション実装パターン
+
+### 3-1. FLIP（カードの「移動」を見せる標準手法）
+
+レイアウト変更で要素の位置が変わるとき、CSS transition では直接アニメーションできない（開始・終了座標はレイアウト計算後にしか分からない）。FLIP はその解決法：
+
+- **First** … 変更前に `getBoundingClientRect()` で現在位置を測る
+- **Last** … 変更を適用し、新しい位置を測る
+- **Invert** … 差分を `transform` で逆向きに適用し、見た目だけ元の位置に戻す
+- **Play** … transform を 0 に戻す transition をかける（transform はレイアウトに影響しないので毎フレーム再計算が起きず滑らか）
+
+注意点：読み取りと書き込みをバッチ化する（交互に行うとレイアウトスラッシング）。サイズも変わる場合は scale が入り、文字や枠が歪む。`prefers-reduced-motion` の場合はアニメーションを省略して即時変更に落とす。
+出典：css-animation.com「FLIP Technique for Layout Animations」 https://www.css-animation.com/performance-budgeting-gpu-architecture/compositor-only-property-optimization/flip-technique-for-layout-animations/ 、Modern CSS Layouts「When to Use JavaScript for Animation」 https://www.modern-css-layouts.com/css-only-micro-interactions-animations/css-animation-vs-web-animations-api/when-to-use-javascript-animation/
+
+### 3-2. カードの「めくり」は CSS 3D が定番
+
+`transform-style: preserve-3d` ＋ 表裏両面に `backface-visibility: hidden` ＋ `.flipped { transform: rotateY(180deg)}` に transition をかける形が、素のJS製カードゲームで繰り返し使われる定型。
+出典：ogawahideto/genai「りんごカードゲーム」（単一ファイル、Vanilla JS、GitHub）紹介記事 https://note.com/happy_dahlia405/n/n5703873c5949 、DEV「Cards that flip!」 https://practicaldev-herokuapp-com.freetls.fastly.net/tolentinoel/cards-that-flip-169o
+
+### 3-3. deck-of-cards（GitHub）：JS駆動のカードアニメーションライブラリ
+
+pakastin/deck-of-cards（HTML5 Deck of Cards、依存なしの素のJS、約3.1k stars）は、カードの移動を CSS transition ではなく JS（requestAnimationFrame）で駆動する実装例。
+
+- `card.animateTo({ delay, duration, ease, x, y})` でカードを指定位置へアニメーション（easing は 'quartOut' など名前で指定）
+- シャッフル・整列・扇形展開（fan）などの操作は **キュー** で直列化し、アニメーション同士の競合を防ぐ
+- カードの表裏は `setSide('front'|'back')` で切り替えるフリップを持つ
+- 0.1.3 で「CSS transitions are now gone: say hello to JS animations!」と、CSS遷移からJSアニメーションへ移行した経緯がリリースノートに残っている
+
+出典：GitHub README（raw） https://raw.githubusercontent.com/dabao12321/deck-of-cards-tractor/master/README.md 、Releases https://Github.Com/deck-of-cards/deck-of-cards/releases 、DeepWiki のコンポーネント解説 https://deepwiki.com/deck-of-cards/deck-of-cards/3-core-components
+
+### 3-4. その他の実例パターン
+
+- **The Art of Web のメモリーカードゲーム** … JS がカードの位置・回転を決め、実際の遷移は CSS の transition（left/top/transform に別々の timing function）で行う分担型。単一HTML＋動的生成。
+出典：https://www.the-art-of-web.com/javascript/card-game-memory/
+- **ルールと描画の分離** … 学習用実装でも「ルールだけのファイル（描画なし）」と「描画とクリック処理」を分ける構成が推奨されている。演出を差し替えてもルールに触らないための土台になる。
+出典：Zyran Academy「Memory Card Game in JavaScript」 https://zyranacademy.com/projects/memory-game-javascript/
+
+### 3-5. ダメージ表示・バフ可視化について
+
+ダメージ数字・ヒットフラッシュ（白フラッシュ1〜2フレーム）・ノックバック等は game feel の定番部品として 2 章の各出典に列挙される（iroirotool の部品表、gamedo の Game Feel 101 https://gamedo.live/news/game-feel-juice-guide-indie-devs/ ）。一方、「盾・バフ専用」のWeb実装パターンを体系化した公開資料は今回の調査では見つからなかった。盾の可視化は、(a) 常駐するバッジ／アイコン（状態表示）と (b) 発動・消費の瞬間の演出（イベント演出）の合成で設計するのが現実的というのが筆者の見立て。
+
+---
+
+## 4. 「盾の提供の視覚化」への適用案
+
+前提（2-3 の分離原則より）：ゲームロジックは「盾が提供された」「ダメージが盾で防がれた」「盾が消費された」という **イベントを発行するだけ** にし、見た目はイベントを受け取る演出層が担う。演出はルール結果を変えない。ターン制シミュレーターなので、演出は「読み終わるのを待たせない長さ」（桜井「遅さは罪」）に抑え、CPU手番の連続イベントはキューで順序再生する（3-3 のキュー方式）。
+
+### 場面1：盾が提供される（防御カードを出す／盾が付く瞬間）
+
+- **動きの骨格**：桜井の4内訳に当てると「構え→攻撃」に相当。防御カードがわずかに持ち上がる／光る予備動作（予備動作の原則：本動作の直前に小さな逆方向の溜め）のあと、盾アイコンがカードからプレイヤー側の定位置へ **移動** して収まる。移動は FLIP（3-1）で実装すると、DOM上の実配置と見た目の移動が分離でき、既存レイアウトを壊さない。
+- **到着の仕上げ**：着地時に小さなオーバーシュート（行き過ぎて少し戻る。桜井「モーション」要約にある古典的手法）と、スケールの「パンチ」（一瞬大きく→戻る）で「付いた」ことを示す。Nijman の「出現のトゥイーン」に相当。
+- **音**（将来）：付着音は短く出だしの強い音を1つ（手応えの切り分け順では音の出だしが3番目の要素）。
+
+### 場面2：盾が場に留まる（常駐）
+
+- **役割**：これは演出というより **Staging（読み取り可能性）** の問題。盾の有無と残数が、ログを読まずに一目で分かることが本体。盾アイコン＋残数をプレイヤー表示の定位置に常駐させる。
+- **動き**：常駐中はほぼ静止が原則。入れるなら「副次アクション」としてごく弱い呼吸のような明滅／浮遊にとどめる（強く動かすと他の情報の読み取りを邪魔する）。桜井の「待機は全ての原点で、ぶらさない」に倣い、定位置・定サイズを厳密に守る。
+- **変化の通知**：盾が増減した瞬間だけ、場面1／場面3のイベント演出で知らせる。常駐表示自体は数値の現在形だけを担う。
+
+### 場面3：ダメージを受けて盾が砕ける（防御の発動・消費）
+
+- **骨格**：打撃感の部品表（iroirotool）をそのまま盾に読み替える。
+1. **ヒットストップ** … ダメージが盾に当たった瞬間、全体（または関係する要素だけ）を数フレーム止める。「大事なところはストップ!」の「止め」段階。止めることで「防いだ」事実が体感に残る。
+2. **ヒットマーク** … 止まっている間に盾にヒビ／閃光を出す。桜井のダメージモーション原則どおり、ストップ中に一番長く見える「最初の1フレーム（＝止まった絵）」で「盾が受け止めた」ことが遠目にも読める絵にする。
+3. **フォロースルー** … 停止解除後、盾の破片が飛散して消える（フォロースルー／オーバーラッピング：本体が止まっても破片は余韻で動き続ける）。破片の消滅までが「消費された」の伝達になる。
+4. **数字** … 防いだ量を示す数字（例：「-6」ではなく盾の形をした「0」や「防」相当の表示）を短くポップさせる。HPが減らなかったことが数字でも裏づけられる。
+5. **音**（将来）… 砕ける音は出だしを強く。貫通などで盾をすり抜けた場合は音と絵を変え、「防げなかった」ことも同じ文法で見せる。
+- **強弱の付け方**：Nijman の「Bigger reactions for bigger actions」に従い、防いだダメージ量に応じてストップ時間・破片の量・閃光の大きさを比例させる。小ダメージは「止め」のみ、大ダメージは「止め＋振動＋スロー」寄り（桜井の段階論）にする。
+
+### 実装順序の提案
+
+2-1 の段階論（リスト→キーポーズ→タイミング→滑らかさ→ポリッシュ）に沿って：
+
+1. まず3場面の **キーフレームだけを静止画的に** 決める（提供＝盾が定位置にいる絵、常駐＝バッジの絵、砕ける＝ヒビの入った盾の絵）。動きなしで「絵が読めるか」を先に判定する。
+2. 次に場面3（砕ける）から時間軸を付ける。理由：ヒットストップ＋フラッシュだけでも成立し、効果対コストが最も高い（Nijman の実演でも停止とフラッシュは早期に効く部品）。
+3. 場面1の移動（FLIP）を付ける。場面2は常駐バッジの確定のみ。
+4. 最後にタイミングと easing の調整（ポリッシュ）。全体の再生時間が手番のテンポを壊していないかを実測する。
+
+---
+
+## 出典一覧
+
+- 桜井政博のゲーム作るには 要約（senkohome）「モーション」 https://senkohome.com/sakurai-game-dev-motion/ ／「企画・ゲーム設計」 https://senkohome.com/sakurai-game-dev-planning-design/
+- note「大事なところはストップ!」 https://note.com/matchima2/n/n435a2b0f151f
+- hikitomori「『桜井政博のゲーム作るには』を見て思うこと」 https://hikitomori.com/sakuraimasahiro-gamewotukuruniha-kansou
+- AIみちくさch「桜井政博さんの『ゲーム作るには』をAIスキルに」（非公式要約の紹介） https://ai-michikusa.com/?p=4657
+- CGWorld「流流とはじめる、簡単リグ＆モーション制作 第8回」 https://cgworld.jp/regular/202601-rururig-08.html
+- CLIP STUDIO「はじめての2Dアニメーション 基本原則と制作の流れ」 https://www.clipstudio.net/oekaki/archives/174900
+- note/KDP「3DCG・動画制作で必須のアニメーション基本12原則」 https://note.com/kdp_2019/n/na07dce9c04f9
+- GameDesign.gg 用語集「Juice」 https://gamedesign.gg/glossary/juice/
+- datafield.dev「Chapter 8 Further Reading」 https://datafield.dev/video-game-design/part-02/chapter-08/further-reading.html
+- artificials.ch「Juice Up Your Game」（Nijman 30テクニック整理） https://artificials.ch/juice-up-your-game/
+- iroirotool「ゲームの手触り その3 — 打撃感」 https://iroirotool.com/knowledge/game_dev/game_feel_3.html
+- game-feel-juice リファレンス（Hugging Face ミラー） https://huggingface.co/CrashOverrideX/Quillan-Ronin/blob/main/09%20-%20Projects/projects/Motherload%20zip%20find/.grok/skills/building-games/references/game-feel-juice.md
+- JAKESJAM game-feel-juice スキル（GitHub） https://github.com/jbotsd/jakesjam/blob/HEAD/.claude/skills/game-feel-juice/SKILL.md
+- gamedo「Game Feel 101」 https://gamedo.live/news/game-feel-juice-guide-indie-devs/
+- css-animation.com「FLIP Technique for Layout Animations」 https://www.css-animation.com/performance-budgeting-gpu-architecture/compositor-only-property-optimization/flip-technique-for-layout-animations/
+- Modern CSS Layouts「When to Use JavaScript for Animation」 https://www.modern-css-layouts.com/css-only-micro-interactions-animations/css-animation-vs-web-animations-api/when-to-use-javascript-animation/
+- pakastin/deck-of-cards（GitHub）README https://raw.githubusercontent.com/dabao12321/deck-of-cards-tractor/master/README.md ／ Releases https://Github.Com/deck-of-cards/deck-of-cards/releases ／ DeepWiki https://deepwiki.com/deck-of-cards/deck-of-cards/3-core-components
+- ogawahideto/genai「りんごカードゲーム」紹介（note） https://note.com/happy_dahlia405/n/n5703873c5949
+- The Art of Web「Memory Card Game with Animation」 https://www.the-art-of-web.com/javascript/card-game-memory/
+- Zyran Academy「Memory Card Game in JavaScript」 https://zyranacademy.com/projects/memory-game-javascript/

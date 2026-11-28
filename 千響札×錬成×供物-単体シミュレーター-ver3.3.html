@@ -1,0 +1,2351 @@
+
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>『千響札×錬成×供物』単体シミュレーター (ver.3.3)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800;900&family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      background-color: #0f172a;
+      color: #f1f5f9;
+      font-family: 'Inter', 'Noto Sans JP', sans-serif;
+      line-height: 1.2;
+      margin: 0;
+    }
+
+    /* 2層チップ表示（塗り＝属性色、外縁＝所属システム色）常時オン */
+    .chip-card {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.22rem;
+      padding: 0.14rem 0.44rem;
+      border-radius: 0.375rem;
+      font-weight: 800;
+      font-size: 0.72rem;
+      line-height: 1.15;
+      cursor: pointer;
+      transition: transform 0.1s ease, filter 0.15s ease;
+      user-select: none;
+      background-color: #1e293b;
+      color: #f8fafc;
+    }
+    .chip-card:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.12);
+    }
+    .chip-card:active {
+      transform: translateY(0);
+    }
+
+    /* 塗り（属性色） */
+    .fill-red { background-color: rgba(248, 113, 113, 0.22); }
+    .fill-pink { background-color: rgba(244, 114, 182, 0.22); }
+    .fill-purple { background-color: rgba(192, 132, 252, 0.22); }
+    .fill-gold { background-color: rgba(234, 179, 8, 0.24); }
+    .fill-crimson { background-color: rgba(251, 113, 133, 0.24); }
+    .fill-multi { background-color: rgba(148, 163, 184, 0.22); }
+
+    /* 外縁（所属システム色） */
+    .sys-base {
+      border: 1.5px solid #e2e8f0;
+    }
+    .sys-alchemy {
+      border: 2px solid #fef08a;
+      box-shadow: 0 0 0 1px #ca8a04;
+    }
+    .sys-offering {
+      border: 2px solid #fecdd3;
+      box-shadow: 0 0 0 1px #e11d48;
+    }
+
+    /* 錬成釜ワイド表示 */
+    .alchemy-wide-row {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .alchemy-wide-chip {
+      flex: 1 1 auto;
+      min-width: 0;
+      justify-content: space-between;
+      padding: 0.18rem 0.6rem;
+      letter-spacing: 0.01em;
+    }
+
+    /* 行動選択肢ボタン */
+    .action-item {
+      transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+    }
+    .action-item:hover {
+      border-color: #818cf8;
+      background-color: rgba(30, 41, 59, 0.98);
+    }
+    .action-item:active {
+      box-shadow: 0 0 0 1px #818cf8, 0 0 12px rgba(129, 140, 248, 0.35);
+    }
+
+    /* カスタムスクロールバー */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+  </style>
+</head>
+<body class="p-1.5 pb-6 flex justify-center">
+  <main class="w-full max-w-4xl space-y-1">
+
+    <!-- 1. 共有領域（最上部・ヘッダー帯なし） -->
+    <section id="sharedZone" class="rounded-lg bg-[#1e293b] border border-[#334155] px-2.5 py-1 text-[11px] sm:text-xs"></section>
+
+    <!-- 2. 相手パネル -->
+    <section id="oppPanel" class="rounded-lg bg-[#1e293b] border border-[#334155] px-2.5 py-1 space-y-1"></section>
+
+    <!-- 3. 自分パネル -->
+    <section id="mePanel" class="rounded-lg bg-[#1e293b] border-2 border-indigo-500/75 px-2.5 py-1 space-y-1"></section>
+
+    <!-- カード・領域詳細確認ポップアップ -->
+    <section id="detailModal" class="hidden rounded-lg bg-[#0b1120] border border-slate-500 px-2.5 py-1.5 text-xs space-y-1 shadow-xl">
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <span id="detailTitle" class="font-extrabold text-white"></span>
+          <span id="detailSub" class="text-[11px] text-slate-400"></span>
+        </div>
+        <button type="button" onclick="closeDetail()" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 shrink-0">閉じる</button>
+      </div>
+      <div id="detailDesc" class="text-slate-200 leading-snug whitespace-pre-line"></div>
+    </section>
+
+    <!-- 4. 行動選択肢ブロック（スクロールリスト・折り畳みなし） -->
+    <section class="rounded-lg bg-[#1e293b] border border-[#334155] px-2.5 py-1.5 space-y-1">
+      <div class="flex items-center justify-between gap-2 border-b border-slate-700/80 pb-0.5">
+        <span id="phaseHeading" class="text-xs font-extrabold text-indigo-300"></span>
+        <span id="lastStepSummary" class="text-[11px] text-slate-300 truncate max-w-[60%]"></span>
+      </div>
+      <div id="actionList" class="space-y-1 text-xs max-h-[42vh] overflow-y-auto pr-0.5"></div>
+    </section>
+
+    <!-- 対戦ログドロワー（開閉式） -->
+    <section id="logDrawer" class="rounded-lg bg-[#0b1120] border border-slate-600 px-2.5 py-1.5 text-[11px] space-y-1">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-0.5">
+        <span class="font-bold text-slate-200">対戦進行ログ（最新順）</span>
+        <button type="button" onclick="toggleLog()" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700">閉じる</button>
+      </div>
+      <div id="logContent" class="max-h-48 overflow-y-auto space-y-0.5 text-slate-300 font-mono"></div>
+    </section>
+
+    <!-- 5. 検証用コンパクト操作バー（最下部1行） -->
+    <footer class="rounded-lg bg-[#1e293b]/90 border border-[#334155] px-2 py-1 flex flex-wrap items-center justify-between gap-1.5 text-[11px]">
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button type="button" id="btnVisibility" onclick="togglePublicMode()" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold">手札：非公開</button>
+        <button type="button" id="btnSide" onclick="togglePlayerFirst()" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-600 text-indigo-300 font-bold">あなた：先攻</button>
+        <label class="inline-flex items-center gap-1 text-slate-300">
+          <span>乱数開始:</span>
+          <input type="number" id="rngStartInput" min="1" max="200" value="1" class="w-12 px-1 py-0.5 rounded bg-slate-900 border border-slate-600 text-white text-center font-bold" />
+        </label>
+        <button type="button" onclick="startNewGame()" class="px-2 py-0.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-bold">新規対戦</button>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button type="button" id="btnUndo" onclick="undoStep()" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold disabled:opacity-40">1手戻す</button>
+        <button type="button" onclick="toggleLog()" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-600 text-amber-300 font-bold">ログ</button>
+      </div>
+    </footer>
+
+  </main>
+
+  <script>
+    // =========================================================================
+    // 1. 乱数表（第12章 12-4-7：位置1〜200）
+    // =========================================================================
+    const RNG_TABLE = [
+      68,92,42,46,18,57,32,45,12,95,
+      80,48,20,58,47,24,26,54,40,82,
+      69,54,67,67,98,33,11,74,16,80,
+      84, 1,31,65,28,67,50, 1,22,53,
+      58,38,37,62,60,92,33,51,79,48,
+      14,59,83,95,10,12,17,85,37,66,
+      57, 7,39,80,95,48,25,73,16,90,
+      48,31,74,42,57,86,47,41,76,22,
+      45,86,87,80,18,65,29,58,72,98,
+      37,36,83,96,66,94,37,92,80,94,
+      48,14,42, 2,74,87, 0,32,94,56,
+      45,54,58,36,44,20,20,64,45,98,
+      58,56,37,60,43, 8,92,86,87,84,
+      23,32,21,43, 1,69,35,44,93,34,
+      63,67,59,54, 1,85,58,78,47,21,
+      48,21,29,19, 7,82,23,77,93,15,
+      15,55,19,73,70,52,65,45,97,90,
+      90,29, 2,56,79,24,57,61,52,16,
+      64,53,75,13,66, 3,43,34,64,48,
+      77,18,45,97,11,22,21,80,17,92
+    ];
+
+    // =========================================================================
+    // 2. カード定義マスター（全97種・139枚）
+    // =========================================================================
+    const ATTR_COLORS = {
+      '攻撃': '#f87171',
+      '溜撃': '#f87171',
+      '防御': '#f472b6',
+      '重鎧': '#f472b6',
+      '対策': '#c084fc',
+      '腐蝕': '#c084fc',
+      '錬成': '#eab308',
+      '供物': '#fb7185'
+    };
+
+    const ATTR_DOTS = {
+      '攻撃': '🔴',
+      '溜撃': '🔴',
+      '防御': '🩷',
+      '重鎧': '🩷',
+      '対策': '🟣',
+      '腐蝕': '🟣',
+      '錬成': '🟡',
+      '供物': '🩸'
+    };
+
+    const ATTR_TO_COLOR = {
+      '攻撃': 'red',
+      '溜撃': 'red',
+      '防御': 'white',
+      '重鎧': 'white',
+      '対策': 'black',
+      '腐蝕': 'black',
+      '錬成': 'black',
+      '供物': 'black'
+    };
+
+    // 基本・上位・超越・錬成・供物の定義一覧
+    const CARD_DEFS = {
+      // 基本カード (6種7枚)
+      '攻撃': { system: 'base', tier: 'basic', attrs: ['攻撃'], priority: 69, classRank: 'C', summary: '次の自分の開始フェイズに相手へ6ダメージを与え、自壊する。' },
+      '溜撃': { system: 'base', tier: 'basic', attrs: ['溜撃'], priority: 71, classRank: 'F', summary: '次の開始フェイズに全員へ1ダメージ、その次の開始フェイズに相手へ5ダメージを与え自壊。' },
+      '防御': { system: 'base', tier: 'basic', attrs: ['防御'], priority: 67, classRank: 'C', summary: '盾を1つ提供する（使用するまで場に残る）。' },
+      '重鎧': { system: 'base', tier: 'basic', attrs: ['重鎧'], priority: 68, classRank: 'C', summary: '盾を1つ提供する（使用するまで場に残る）。' },
+      '対策': { system: 'base', tier: 'basic', attrs: ['対策'], priority: 64, classRank: 'E', summary: '出した次の行動フェイズ以降、場の他のカード1枚を破壊して自壊できる。' },
+      '腐蝕': { system: 'base', tier: 'basic', attrs: ['腐蝕'], priority: 65, classRank: 'F', summary: '場のカードを0〜1枚破壊し、相手の場に置く。場の所有者のターン終了時に自壊。' },
+
+      // 上位カード (15種30枚)
+      '攻撃×溜撃': { system: 'base', tier: 'upper', attrs: ['攻撃','溜撃'], priority: 16, classRank: 'F', summary: '永続：自分の与ダメージ+1、自分の赤カードからの自傷-1。' },
+      '攻撃×防御': { system: 'base', tier: 'upper', attrs: ['攻撃','防御'], priority: 66, classRank: 'D', summary: '次の開始フェイズに①相手へ4ダメージ＋自壊、または②盾1つを得て残る。' },
+      '攻撃×重鎧': { system: 'base', tier: 'upper', attrs: ['攻撃','重鎧'], priority: 59, classRank: 'C', summary: '被ダメージ-2。次の開始フェイズに相手へ2ダメージを与え自壊。' },
+      '攻撃×対策': { system: 'base', tier: 'upper', attrs: ['攻撃','対策'], priority: 24, classRank: 'C', summary: '次の開始フェイズに相手へ貫通3ダメージを与え自壊。' },
+      '攻撃×腐蝕': { system: 'base', tier: 'upper', attrs: ['攻撃','腐蝕'], priority: 41, classRank: 'F', summary: '場のカード0〜1枚破壊後、場の《対策》《腐蝕》を全て破壊して自壊。' },
+      '溜撃×防御': { system: 'base', tier: 'upper', attrs: ['溜撃','防御'], priority: 58, classRank: 'B', summary: '永続：相手のカード1枚から受けるダメージ-1（自傷は対象外）。' },
+      '溜撃×重鎧': { system: 'base', tier: 'upper', attrs: ['溜撃','重鎧'], priority: 60, classRank: 'B', summary: '次の行動フェイズ以降、自分に2ダメージ払い予約ダメージ持ち1枚の下に装備（貫通化）。' },
+      '溜撃×対策': { system: 'base', tier: 'upper', attrs: ['溜撃','対策'], priority: 34, classRank: 'F', summary: '使用時に味方1枚を破壊して下に置ける。次の開始フェイズに貫通1（下にあれば貫通4）与え自壊。' },
+      '溜撃×腐蝕': { system: 'base', tier: 'upper', attrs: ['溜撃','腐蝕'], priority: 40, classRank: 'F', summary: '次の行動フェイズ以降、1回だけ自分の黒1枚を破壊し自分2ダメージ＋1ドロー＋1行動。' },
+      '防御×重鎧': { system: 'base', tier: 'upper', attrs: ['防御','重鎧'], priority: 56, classRank: 'F', summary: '永続：相手から受ける貫通ダメージを通常ダメージとして扱う（盾で防げる）。' },
+      '防御×対策': { system: 'base', tier: 'upper', attrs: ['防御','対策'], priority: 47, classRank: 'E', summary: '次の行動フェイズ以降、自分へ2ダメージ払い捨て札から防御/重鎧1枚を使用し自壊。' },
+      '防御×腐蝕': { system: 'base', tier: 'upper', attrs: ['防御','腐蝕'], priority: 44, classRank: 'F', summary: '盾1つ。次の開始フェイズに自壊し、自分の黒全てを破壊して効果処理できる。' },
+      '重鎧×対策': { system: 'base', tier: 'upper', attrs: ['重鎧','対策'], priority: 61, classRank: 'F', summary: '行動の代わりに手札1枚を下に裏向きで重ね、盾1つとして扱う。' },
+      '重鎧×腐蝕': { system: 'base', tier: 'upper', attrs: ['重鎧','腐蝕'], priority: 42, classRank: 'F', summary: '手札1枚捨て、他の場のカード0〜1枚破壊して手札に加え、自壊。' },
+      '対策×腐蝕': { system: 'base', tier: 'upper', attrs: ['対策','腐蝕'], priority: 43, classRank: 'F', summary: '場のカード0〜1枚破壊し、即座に自分1ダメージを受け、自壊。' },
+
+      // 超越カード (50種50枚)
+      '猛火の増幅炉：攻撃×攻撃×溜撃': { system: 'base', tier: 'trans', attrs: ['攻撃','攻撃','溜撃'], priority: 6, classRank: 'F', summary: '永続：自分のカードが相手に与えるダメージ+3。' },
+      '攻防一体の重砲：攻撃×攻撃×防御': { system: 'base', tier: 'trans', attrs: ['攻撃','攻撃','防御'], priority: 12, classRank: 'B', summary: '盾1つ。次の開始フェイズに相手へ6ダメージ（1回限り、場に残る）。' },
+      '燃え尽きる重砲：攻撃×攻撃×重鎧': { system: 'base', tier: 'trans', attrs: ['攻撃','攻撃','重鎧'], priority: 11, classRank: 'B', summary: '被ダメージ-2。次の開始フェイズに相手へ6ダメージを与え自壊。' },
+      '二連の穿孔撃：攻撃×攻撃×対策': { system: 'base', tier: 'trans', attrs: ['攻撃','攻撃','対策'], priority: 10, classRank: 'C', summary: '次の開始フェイズに貫通2、その次の開始フェイズに貫通2を与え自壊。' },
+      '破壊の置き土産：攻撃×攻撃×腐蝕': { system: 'base', tier: 'trans', attrs: ['攻撃','攻撃','腐蝕'], priority: 7, classRank: 'F', summary: '場のカード0〜2枚破壊し、相手の場に置く。' },
+      '業火の手綱：攻撃×溜撃×溜撃': { system: 'base', tier: 'trans', attrs: ['攻撃','溜撃','溜撃'], priority: 9, classRank: 'F', summary: '永続：与ダメージ+2、自分の赤カードからの自傷-1。' },
+      '火を抱く盾：攻撃×溜撃×防御': { system: 'base', tier: 'trans', attrs: ['攻撃','溜撃','防御'], priority: 21, classRank: 'F', summary: '永続：盾1つ、与ダメージ+1、赤自傷-1。' },
+      '鋼鉄の燃焼炉：攻撃×溜撃×重鎧': { system: 'base', tier: 'trans', attrs: ['攻撃','溜撃','重鎧'], priority: 22, classRank: 'A', summary: '永続：被ダメージ-1、与ダメージ+1、赤自傷-1。' },
+      '戦場を焼く残火：攻撃×溜撃×対策': { system: 'base', tier: 'trans', attrs: ['攻撃','溜撃','対策'], priority: 20, classRank: 'F', summary: '使用時0〜1枚破壊。永続：与ダメージ+1、赤自傷-1。' },
+      '黒喰らいの大砲：攻撃×溜撃×腐蝕': { system: 'base', tier: 'trans', attrs: ['攻撃','溜撃','腐蝕'], priority: 17, classRank: 'E', summary: '次の行動フェイズ以降、自分の黒1枚を破壊するたび相手へ2ダメージ（回数制限なし）。' },
+      '棘の二重防壁：攻撃×防御×防御': { system: 'base', tier: 'trans', attrs: ['攻撃','防御','防御'], priority: 48, classRank: 'A', summary: '盾2つ。相手由来のダメージを盾で防ぐたび相手へ1ダメージ反射。' },
+      '戦線再編の号令：攻撃×防御×重鎧': { system: 'base', tier: 'trans', attrs: ['攻撃','防御','重鎧'], priority: 63, classRank: 'F', summary: '次の開始フェイズに味方基本/上位1枚を破壊して手札に戻し、無料1使用して自壊。' },
+      '守護者の重槍：攻撃×防御×対策': { system: 'base', tier: 'trans', attrs: ['攻撃','防御','対策'], priority: 8, classRank: 'B', summary: '盾1つ。次の開始フェイズに相手へ貫通3ダメージ（1回限り、場に残る）。' },
+      '終末の更地：攻撃×防御×腐蝕': { system: 'base', tier: 'trans', attrs: ['攻撃','防御','腐蝕'], priority: 27, classRank: 'F', summary: '他の場のカードを全て破壊し、相手の場に置く。' },
+      '絶対防御からの一撃：攻撃×重鎧×重鎧': { system: 'base', tier: 'trans', attrs: ['攻撃','重鎧','重鎧'], priority: 51, classRank: 'C', summary: '被ダメージ-6。次の開始フェイズに相手へ2ダメージを与え自壊。' },
+      '手札装填の発射機：攻撃×重鎧×対策': { system: 'base', tier: 'trans', attrs: ['攻撃','重鎧','対策'], priority: 14, classRank: 'F', summary: '行動の代わりに手札1枚を上に重ね、次の開始フェイズに6ダメージ＋自壊弾にする。' },
+      '掠奪と粛清の嵐：攻撃×重鎧×腐蝕': { system: 'base', tier: 'trans', attrs: ['攻撃','重鎧','腐蝕'], priority: 31, classRank: 'F', summary: '手札1枚捨て0〜1枚奪取後、場の黒を全て破壊して自壊。' },
+      '自らを削る貫き：攻撃×対策×対策': { system: 'base', tier: 'trans', attrs: ['攻撃','対策','対策'], priority: 5, classRank: 'C', summary: '0〜1枚破壊＋自分1ダメージ。次の開始フェイズに貫通3ダメージ与え自壊。' },
+      '命運の調律者：攻撃×対策×腐蝕': { system: 'base', tier: 'trans', attrs: ['攻撃','対策','腐蝕'], priority: 33, classRank: 'F', summary: '自分か相手のHPを7にして自壊する。' },
+      '黒き技術の簒奪：攻撃×腐蝕×腐蝕': { system: 'base', tier: 'trans', attrs: ['攻撃','腐蝕','腐蝕'], priority: 30, classRank: 'F', summary: '0〜1枚破壊後、相手の黒0〜1枚を破壊して効果処理でき、自壊。' },
+      '絶え間なき雫の盾：溜撃×溜撃×防御': { system: 'base', tier: 'trans', attrs: ['溜撃','溜撃','防御'], priority: 54, classRank: 'B', summary: '盾1つ。毎自分の開始フェイズに相手へ1ダメージ。' },
+      '戦略的全破壊：溜撃×溜撃×重鎧': { system: 'base', tier: 'trans', attrs: ['溜撃','溜撃','重鎧'], priority: 13, classRank: 'D', summary: '互いの場の赤・白属性を含むカードを全て破壊し、自壊。' },
+      '時限式穿孔爆弾：溜撃×溜撃×対策': { system: 'base', tier: 'trans', attrs: ['溜撃','溜撃','対策'], priority: 25, classRank: 'F', summary: '使用直後に全員へ貫通1。3回目の自分の開始フェイズに相手へ貫通3与え自壊。' },
+      '与えられた恵みの対価：溜撃×溜撃×腐蝕': { system: 'base', tier: 'trans', attrs: ['溜撃','溜撃','腐蝕'], priority: 28, classRank: 'F', summary: '相手の場のカードを全て破壊し相手の場に置く（相手に与ダメ+1/自傷-1付与）。' },
+      '静謐なる二重殻：溜撃×防御×防御': { system: 'base', tier: 'trans', attrs: ['溜撃','防御','防御'], priority: 55, classRank: 'B', summary: '永続：被ダメージ-1、赤自傷-1。' },
+      '自爆鎧の配給：溜撃×防御×重鎧': { system: 'base', tier: 'trans', attrs: ['溜撃','防御','重鎧'], priority: 57, classRank: 'A', summary: '永続：自分の赤カード全てに盾1付与（うち1つは貫通対応、使用で自壊）。' },
+      '身代わりの祭壇：溜撃×防御×対策': { system: 'base', tier: 'trans', attrs: ['溜撃','防御','対策'], priority: 49, classRank: 'F', summary: '永続：相手からダメージを受けるたび味方1枚を破壊して0にできる。' },
+      '循環の錬成陣：溜撃×防御×腐蝕': { system: 'base', tier: 'trans', attrs: ['溜撃','防御','腐蝕'], priority: 45, classRank: 'F', summary: '手札1枚捨て捨て札の超越0〜1枚回収、基本/上位をデッキに戻し自身は待機へ。' },
+      '完全再生の聖鎧：溜撃×重鎧×重鎧': { system: 'base', tier: 'trans', attrs: ['溜撃','重鎧','重鎧'], priority: 70, classRank: 'F', summary: '自分のHPを13にして自壊する。' },
+      '災厄の偏向鏡：溜撃×重鎧×対策': { system: 'base', tier: 'trans', attrs: ['溜撃','重鎧','対策'], priority: 23, classRank: 'F', summary: '永続：与ダメージ+1、「全員へダメージ」が相手にのみ与えられる。' },
+      '戻りゆく超越：溜撃×重鎧×腐蝕': { system: 'base', tier: 'trans', attrs: ['溜撃','重鎧','腐蝕'], priority: 46, classRank: 'F', summary: '手札1枚捨て捨て札の超越0〜1枚回収、残りの超越と自身を待機へ戻す。' },
+      '終焉のカウントダウン：溜撃×対策×対策': { system: 'base', tier: 'trans', attrs: ['溜撃','対策','対策'], priority: 4, classRank: 'F', summary: '3回目の自分の行動フェイズに相手の場・釜強化・中身を全破壊し自壊（供物は不可）。' },
+      '赤き脅威の断絶：溜撃×対策×腐蝕': { system: 'base', tier: 'trans', attrs: ['溜撃','対策','腐蝕'], priority: 26, classRank: 'D', summary: '相手の場の赤カードを全て破壊し、自壊。' },
+      '黒き軍勢の寝返り：溜撃×腐蝕×腐蝕': { system: 'base', tier: 'trans', attrs: ['溜撃','腐蝕','腐蝕'], priority: 29, classRank: 'F', summary: '相手の場の黒カードを全て破壊し自分の場に奪取（効果不発）、自壊。' },
+      '三層の鉄壁：防御×防御×重鎧': { system: 'base', tier: 'trans', attrs: ['防御','防御','重鎧'], priority: 53, classRank: 'F', summary: '盾を3つ提供する（3つ使うと破壊）。' },
+      '迎撃の警戒網：防御×防御×対策': { system: 'base', tier: 'trans', attrs: ['防御','防御','対策'], priority: 1, classRank: 'D', summary: '永続：相手が通常使用で《攻撃》《溜撃》を含むカードを出すたび相手へ3ダメージ。' },
+      '連鎖起動の起爆剤：防御×防御×腐蝕': { system: 'base', tier: 'trans', attrs: ['防御','防御','腐蝕'], priority: 38, classRank: 'F', summary: '行動フェイズに自壊し、自分の黒全てを破壊して効果処理できる。' },
+      '手札を食らう絶対障壁：防御×重鎧×重鎧': { system: 'base', tier: 'trans', attrs: ['防御','重鎧','重鎧'], priority: 50, classRank: 'A', summary: '永続：相手のカードから受けるダメージ0。行動開始時に手札1枚捨てる（なければ自壊）。' },
+      '手札装填の処刑台：防御×重鎧×対策': { system: 'base', tier: 'trans', attrs: ['防御','重鎧','対策'], priority: 62, classRank: 'F', summary: '行動の代わりに手札1枚を下に重ね、破壊効果カードとして扱える。' },
+      '再利用の防壁：防御×重鎧×腐蝕': { system: 'base', tier: 'trans', attrs: ['防御','重鎧','腐蝕'], priority: 36, classRank: 'F', summary: '盾1つ。手札1枚捨て味方基本/上位0〜1枚を破壊して手札に加える。' },
+      '記憶のサルベージ：防御×対策×対策': { system: 'base', tier: 'trans', attrs: ['防御','対策','対策'], priority: 35, classRank: 'E', summary: '手札1枚捨て共有捨て札から好きなカード1枚を手札に加え、自壊。' },
+      '最後の保険：防御×対策×腐蝕': { system: 'base', tier: 'trans', attrs: ['防御','対策','腐蝕'], priority: 3, classRank: 'F', summary: '自分のHPが0になるフェイズ終了時に自身を破壊し、HPを4にする。' },
+      '簒奪の自爆装置：防御×腐蝕×腐蝕': { system: 'base', tier: 'trans', attrs: ['防御','腐蝕','腐蝕'], priority: 39, classRank: 'F', summary: '行動フェイズに自壊し、相手の場のカード0〜1枚を破壊して効果処理できる。' },
+      '生贄を要する巨城：重鎧×重鎧×対策': { system: 'base', tier: 'trans', attrs: ['重鎧','重鎧','対策'], priority: 52, classRank: 'A', summary: '永続：被ダメージ-6。毎自分の開始フェイズに味方基本/上位1枚を破壊。' },
+      '回収機構付き重装甲：重鎧×重鎧×腐蝕': { system: 'base', tier: 'trans', attrs: ['重鎧','重鎧','腐蝕'], priority: 37, classRank: 'F', summary: '被ダメージ-1。手札1枚捨て味方基本/上位0〜1枚を破壊して手札に加える。' },
+      '白き切り札の召喚：重鎧×対策×対策': { system: 'base', tier: 'trans', attrs: ['重鎧','対策','対策'], priority: 15, classRank: 'F', summary: '手札1枚捨て待機から白超越1枚を手札に加える。次の開始フェイズに自壊。' },
+      '命を削る二連行動：重鎧×対策×腐蝕': { system: 'base', tier: 'trans', attrs: ['重鎧','対策','腐蝕'], priority: 32, classRank: 'F', summary: '自分2ダメージ。デッキ上1枚引いて即使用を2回繰り返し、自壊。' },
+      '黒き連鎖の解体機：重鎧×腐蝕×腐蝕': { system: 'base', tier: 'trans', attrs: ['重鎧','腐蝕','腐蝕'], priority: 18, classRank: 'E', summary: '次の行動フェイズ以降、自分の黒1枚を破壊するたび場のカード0〜1枚破壊（複数回可）。' },
+      '二段構えの粛清：対策×対策×腐蝕': { system: 'base', tier: 'trans', attrs: ['対策','対策','腐蝕'], priority: 2, classRank: 'E', summary: '0〜1枚破壊。次の行動フェイズ以降に自壊して相手1枚破壊できる。' },
+      '黒き儀式の触媒：対策×腐蝕×腐蝕': { system: 'base', tier: 'trans', attrs: ['対策','腐蝕','腐蝕'], priority: 19, classRank: 'F', summary: '行動フェイズに1回、自分の黒0〜1枚を破壊し効果処理できる。' },
+
+      // 《錬成》カード (16種32枚)
+      '錬成': { system: 'alchemy', tier: 'basic', attrs: ['錬成'], summary: '錬成の器（基本枠1）。手札1枚＋デッキ上1枚を合成する。' },
+      '錬成×攻撃×攻撃': { system: 'alchemy', tier: 'trans', attrs: ['錬成','攻撃','攻撃'], label: '改良炉', summary: '付属物：起動後、この釜で錬成成功直後に同じターン行動権なしで錬成品を起動できる。' },
+      '錬成×攻撃×防御': { system: 'alchemy', tier: 'trans', attrs: ['錬成','攻撃','防御'], label: '釜の拡張', summary: '中身→起動すると独立した2つ目の器（枠1）になる。' },
+      '錬成×攻撃×対策': { system: 'alchemy', tier: 'trans', attrs: ['錬成','攻撃','対策'], label: '触媒', summary: '起動すると自分の錬成超越1枚を錬成待機の別超越と入れ替え、自身は待機へ戻る。' },
+      '錬成×防御×防御': { system: 'alchemy', tier: 'trans', attrs: ['錬成','防御','防御'], label: '安全弁', summary: '付属物：起動後、錬成失敗時に1回だけめくり直しができる。' },
+      '錬成×防御×対策': { system: 'alchemy', tier: 'trans', attrs: ['錬成','防御','対策'], label: '保管棚', summary: '中身→起動すると保管棚（枠1）になり、フリーアクションで中身を出し入れできる。' },
+      '錬成×対策×対策': { system: 'alchemy', tier: 'trans', attrs: ['錬成','対策','対策'], label: '対抗札', summary: '起動すると相手の釜または保管棚1つを破壊し、自身は待機へ戻る。' },
+      '錬成攻撃': { system: 'alchemy', tier: 'product', attrs: ['錬成','攻撃'], summary: '錬成品：手札1枚と行動1回で起動し予約→次の自分の開始フェイズに相手へ貫通6ダメージ。' },
+      '錬成防御': { system: 'alchemy', tier: 'product', attrs: ['錬成','防御'], summary: '錬成品：手札1枚と行動1回で起動→次の自分の出番終了まで受けるダメージを6軽減（自傷も対象）。' },
+      '錬成対策': { system: 'alchemy', tier: 'product', attrs: ['錬成','対策'], summary: '錬成品：手札1枚と行動1回で起動し予約→次の自分の開始フェイズに相手の場・釜・保管棚を全破壊。' },
+      '錬成×溜撃': { system: 'alchemy', tier: 'upgrade', attrs: ['錬成','溜撃'], summary: '釜強化：①中身を行動権なしで即時起動可。②次の行動以降に自壊してデッキ上1枚のみで単独錬成。' },
+      '錬成×重鎧': { system: 'alchemy', tier: 'upgrade', attrs: ['錬成','重鎧'], summary: '釜強化：①器の破壊身代わり。②貫通も防げる盾1つ提供（使用で破壊）。' },
+      '錬成×腐蝕': { system: 'alchemy', tier: 'upgrade', attrs: ['錬成','腐蝕'], summary: '釜強化：①上位/超越1枚のみの単独判定可。②枠+1（最大2枠）。' },
+      '錬成×溜撃×重鎧': { system: 'alchemy', tier: 'upgrade', attrs: ['錬成','溜撃','重鎧'], summary: '釜強化：《錬成×溜撃》＋《錬成×重鎧》の4機能を全て持つ。' },
+      '錬成×溜撃×腐蝕': { system: 'alchemy', tier: 'upgrade', attrs: ['錬成','溜撃','腐蝕'], summary: '釜強化：《錬成×溜撃》＋《錬成×腐蝕》の4機能を全て持つ。' },
+      '錬成×重鎧×腐蝕': { system: 'alchemy', tier: 'upgrade', attrs: ['錬成','重鎧','腐蝕'], summary: '釜強化：《錬成×重鎧》＋《錬成×腐蝕》の4機能を全て持つ。' },
+
+      // 《供物》カード (10種20枚)
+      '供物': { system: 'offering', tier: 'basic', attrs: ['供物'], summary: '祭壇：行動の代わりにHPを2失い手札1枚を捧げ、対応する供物カードを場に出す。' },
+      '供物×攻撃': { system: 'offering', tier: 'lower', attrs: ['供物','攻撃'], summary: '盾1つ（使うと自壊）。招来バフ：招来直後に相手へ貫通3ダメージ。' },
+      '供物×防御': { system: 'offering', tier: 'lower', attrs: ['供物','防御'], summary: '盾1つ（使うと自壊）。招来バフ：場に残るダメージ完全無効化オーラに変化。' },
+      '供物×対策': { system: 'offering', tier: 'lower', attrs: ['供物','対策'], summary: '次の行動以降、自壊して場0〜1枚破壊（供物も可）。招来バフ：調律者/保険の設定値を±3。' },
+      '供物×攻撃×攻撃': { system: 'offering', tier: 'upper', attrs: ['供物','攻撃','攻撃'], summary: '招来部品：《完全再生の聖鎧》または《命運の調律者》の招来に捧げる。' },
+      '供物×防御×防御': { system: 'offering', tier: 'upper', attrs: ['供物','防御','防御'], summary: '招来部品：《完全再生の聖鎧》または《最後の保険》の招来に捧げる。' },
+      '供物×対策×対策': { system: 'offering', tier: 'upper', attrs: ['供物','対策','対策'], summary: '招来部品：《命運の調律者》または《最後の保険》の招来に捧げる。' },
+      '供物×攻撃×防御': { system: 'offering', tier: 'mixed', attrs: ['供物','攻撃','防御'], summary: '次の行動以降、自壊して予約ダメージ持ち1枚の下に装備（貫通化）。' },
+      '供物×攻撃×対策': { system: 'offering', tier: 'mixed', attrs: ['供物','攻撃','対策'], summary: '次の行動以降、自壊してフリーアクションで共有デッキ一番上のカードを使用。' },
+      '供物×防御×対策': { system: 'offering', tier: 'mixed', attrs: ['供物','防御','対策'], summary: '次の行動以降、フリーアクションで捨て札から防御/重鎧0〜1枚使用し待機へ戻る。' }
+    };
+
+    // 超越レシピ（3属性ソートキー → 超越カード名）
+    const TRANSCEND_RECIPES = {};
+    Object.keys(CARD_DEFS).forEach(name => {
+      const def = CARD_DEFS[name];
+      if (def.system === 'base' && def.tier === 'trans') {
+        const key = [...def.attrs].sort().join('+');
+        TRANSCEND_RECIPES[key] = name;
+      }
+    });
+
+    // 上位レシピ（2属性ソートキー → 上位カード名）
+    const UPPER_RECIPES = {};
+    Object.keys(CARD_DEFS).forEach(name => {
+      const def = CARD_DEFS[name];
+      if (def.system === 'base' && def.tier === 'upper') {
+        const key = [...def.attrs].sort().join('+');
+        UPPER_RECIPES[key] = name;
+      }
+    });
+
+    // =========================================================================
+    // 3. ゲーム状態管理（139枚物理カードトラッキング）
+    // =========================================================================
+    let G = null;
+    let HISTORY = [];
+    let PUBLIC_MODE = false;
+    let PLAYER_IS_FIRST = true;
+
+    function buildPhysicalCards() {
+      const cards = [];
+      let uid = 1;
+      const add = (name, code = '') => {
+        cards.push({
+          uid: uid++,
+          name,
+          code,
+          displayId: code ? `${name}${code}` : name,
+          zone: 'standby', // deck, hand_0, hand_1, field_0, field_1, discard, standby_base, standby_alc, standby_off, cauldron_0, cauldron_1, shelf_0, shelf_1, altar_0, altar_1, stacked
+          shields: 0,
+          stage: 0, // 多段階予約用
+          onceUsed: false,
+          turnPlaced: 0,
+          stackedCards: [], // 下または上に重ねたカードuid配列
+          reservedProduct: false,
+          whiteBuffAura: false,
+          insuranceMod: 0
+        });
+      };
+
+      // 1-7: 基本カード7枚（《攻撃》のみ2枚）
+      add('攻撃', 'a');
+      add('攻撃', 'b');
+      add('溜撃', '');
+      add('防御', '');
+      add('重鎧', '');
+      add('対策', '');
+      add('腐蝕', '');
+
+      // 8-37: 上位カード15種×2
+      Object.keys(CARD_DEFS).forEach(name => {
+        if (CARD_DEFS[name].system === 'base' && CARD_DEFS[name].tier === 'upper') {
+          add(name, 'a');
+          add(name, 'b');
+        }
+      });
+
+      // 38-87: 超越カード50種×1
+      Object.keys(CARD_DEFS).forEach(name => {
+        if (CARD_DEFS[name].system === 'base' && CARD_DEFS[name].tier === 'trans') {
+          add(name, '');
+        }
+      });
+
+      // 88-119: 《錬成》32枚
+      add('錬成', 'a');
+      add('錬成', 'b');
+      Object.keys(CARD_DEFS).forEach(name => {
+        if (CARD_DEFS[name].system === 'alchemy' && name !== '錬成') {
+          add(name, 'a');
+          add(name, 'b');
+        }
+      });
+
+      // 120-139: 《供物》20枚
+      add('供物', 'a');
+      add('供物', 'b');
+      Object.keys(CARD_DEFS).forEach(name => {
+        if (CARD_DEFS[name].system === 'offering' && name !== '供物') {
+          add(name, 'a');
+          add(name, 'b');
+        }
+      });
+
+      return cards;
+    }
+
+    function readRng(state) {
+      const val = RNG_TABLE[state.rngPos - 1];
+      state.rngPos = (state.rngPos % 200) + 1;
+      return val;
+    }
+
+    // 第12章 12-4-3 並べ替え手順
+    function deterministicShuffle(state, list) {
+      const src = [...list];
+      const dst = [];
+      while (src.length > 0) {
+        if (src.length === 1) {
+          dst.push(src.shift());
+        } else {
+          const r = readRng(state);
+          const k = r % src.length;
+          dst.push(src.splice(k, 1)[0]);
+        }
+      }
+      return dst;
+    }
+
+    function initGame(rngStart = 1, playerIsFirst = true) {
+      const cards = buildPhysicalCards();
+      const state = {
+        rngPos: Math.max(1, Math.min(200, Number(rngStart) || 1)),
+        turn: 1,
+        activeSide: 0, // 0 = 先攻, 1 = 後攻
+        humanSide: playerIsFirst ? 0 : 1,
+        phase: 'start', // start, action, target_prompt, gameover
+        winner: null,
+        winReason: '',
+        cards,
+        deck: [], // uid[] (index 0 = top)
+        discard: [], // uid[] (index 0 = top)
+        standbyBase: [],
+        standbyAlc: [],
+        standbyOff: [],
+        players: [
+          {
+            side: 0,
+            hp: 13,
+            hand: [],
+            field: [],
+            altarUid: null,
+            cauldrons: [], // { potUid, activated: true, upgrades: [], attachments: [], attachmentActive: {}, contents: [] }
+            shelf: null, // { cardUid, upgrades: [], contents: [] }
+            alcDefenseShield: 0,
+            pierceShieldUsed: false,
+            usedOfferingGenThisTurn: false,
+            usedFreeCardEffectThisTurn: false
+          },
+          {
+            side: 1,
+            hp: 13,
+            hand: [],
+            field: [],
+            altarUid: null,
+            cauldrons: [],
+            shelf: null,
+            alcDefenseShield: 0,
+            pierceShieldUsed: false,
+            usedOfferingGenThisTurn: false,
+            usedFreeCardEffectThisTurn: false
+          }
+        ],
+        pendingPrompt: null, // プレイヤー選択待ち（盾使用・対象選択など）
+        noChangeTurns: 0,
+        lastSnapshotHash: '',
+        integrityErrors: [],
+        matchResult: null,
+        logs: [],
+        lastSummary: '対戦開始'
+      };
+
+      // カード初期振分（139枚）
+      const basic7 = cards.slice(0, 7);
+      cards.slice(7, 87).forEach(c => { c.zone = 'standby_base'; state.standbyBase.push(c.uid); });
+      cards.slice(87, 119).forEach(c => {
+        if (c.name === '錬成' && c.code === 'a') {
+          c.zone = 'cauldron_0';
+          state.players[0].cauldrons.push({ potUid: c.uid, activated: true, upgrades: [], attachments: [], attachmentActive: {}, contents: [] });
+        } else if (c.name === '錬成' && c.code === 'b') {
+          c.zone = 'cauldron_1';
+          state.players[1].cauldrons.push({ potUid: c.uid, activated: true, upgrades: [], attachments: [], attachmentActive: {}, contents: [] });
+        } else {
+          c.zone = 'standby_alc';
+          state.standbyAlc.push(c.uid);
+        }
+      });
+      cards.slice(119, 139).forEach(c => {
+        if (c.name === '供物' && c.code === 'a') {
+          c.zone = 'altar_0';
+          state.players[0].altarUid = c.uid;
+        } else if (c.name === '供物' && c.code === 'b') {
+          c.zone = 'altar_1';
+          state.players[1].altarUid = c.uid;
+        } else {
+          c.zone = 'standby_off';
+          state.standbyOff.push(c.uid);
+        }
+      });
+
+      // 基本カード7枚シャッフル（12-4-4順：攻撃a, 攻撃b, 溜撃, 防御, 重鎧, 対策, 腐蝕）
+      const shuffled7 = deterministicShuffle(state, basic7.map(c => c.uid));
+      const c1 = getCard(state, shuffled7[0]);
+      const c2 = getCard(state, shuffled7[1]);
+      c1.zone = 'hand_0';
+      state.players[0].hand.push(c1.uid);
+      c2.zone = 'hand_1';
+      state.players[1].hand.push(c2.uid);
+      for (let i = 2; i < 7; i++) {
+        const dc = getCard(state, shuffled7[i]);
+        dc.zone = 'deck';
+        state.deck.push(dc.uid);
+      }
+
+      state.lastSnapshotHash = JSON.stringify(makeTurnSnapshot(state));
+      addLog(state, `【対戦開始】乱数位置:${state.rngPos}から開始。先攻:${playerIsFirst ? 'あなた' : '相手'} / 後攻:${playerIsFirst ? '相手' : 'あなた'}`);
+      addLog(state, `【初期配布】先攻手札1枚／後攻手札1枚／共有デッキ5枚`);
+      checkIntegrity(state);
+      return state;
+    }
+
+    function getCard(state, uid) {
+      return state.cards[uid - 1];
+    }
+
+    function addLog(state, msg) {
+      state.logs.unshift(`T${state.turn}(${state.activeSide === 0 ? '先' : '後'}): ${msg}`);
+      state.lastSummary = msg;
+    }
+
+    function makeTurnSnapshot(state) {
+      return {
+        rngPos: state.rngPos,
+        players: state.players.map(p => ({
+          hp: p.hp, hand: [...p.hand], field: [...p.field], altarUid: p.altarUid,
+          cauldrons: p.cauldrons.map(c => ({...c, upgrades:[...c.upgrades], attachments:[...c.attachments],
+            contents:[...c.contents], attachmentActive:{...c.attachmentActive}})),
+          shelf: p.shelf ? {...p.shelf, upgrades:[...p.shelf.upgrades], contents:[...p.shelf.contents]} : null,
+          alcDefenseShield: p.alcDefenseShield, pierceShieldUsed: p.pierceShieldUsed,
+          usedOfferingGenThisTurn: p.usedOfferingGenThisTurn,
+          usedFreeCardEffectThisTurn: p.usedFreeCardEffectThisTurn
+        })),
+        cards: state.cards.map(c => ({...c, stackedCards:[...(c.stackedCards || [])]})),
+        standbyBase: [...state.standbyBase], standbyAlc: [...state.standbyAlc],
+        standbyOff: [...state.standbyOff], deck: [...state.deck], discard: [...state.discard]
+      };
+    }
+
+    function recordTurnEnd(state) {
+      const snapshot = JSON.stringify(makeTurnSnapshot(state));
+      if (state.lastSnapshotHash && snapshot === state.lastSnapshotHash) state.noChangeTurns += 1;
+      else state.noChangeTurns = 0;
+      state.lastSnapshotHash = snapshot;
+      const sideSummary = state.players.map((p, side) => {
+        const field = p.field.map(uid => getCard(state,uid).name).join('・') || 'なし';
+        const cauldrons = p.cauldrons.map(c => `釜[強化:${c.upgrades.map(uid=>getCard(state,uid).name).join('・')||'なし'}／付属:${c.attachments.map(uid=>getCard(state,uid).name).join('・')||'なし'}／中身:${c.contents.map(uid=>getCard(state,uid).name).join('・')||'なし'}]`).join(' ');
+        const shelf = p.shelf ? `／保管棚:${p.shelf.contents.map(uid=>getCard(state,uid).name).join('・')||'空'}` : '';
+        return `${side === 0 ? '先攻' : '後攻'} HP${p.hp}・手札${p.hand.length}枚・場[${field}]・${cauldrons}${shelf}`;
+      }).join(' ｜ ');
+      const topDiscard = state.discard.slice(0,5).map(uid=>getCard(state,uid).name).join('・') || 'なし';
+      addLog(state, `【ターン終了状態】${sideSummary}｜デッキ${state.deck.length}枚／捨て札${state.discard.length}枚（上:${topDiscard}）／待機 基本${state.standbyBase.length}・錬成${state.standbyAlc.length}・供物${state.standbyOff.length}／乱数位置${state.rngPos}／無変化${state.noChangeTurns}/4`);
+      if (state.noChangeTurns >= 4 && state.phase !== 'gameover') {
+        state.phase = 'gameover';
+        state.winner = state.players[0].hp > state.players[1].hp ? 0 : (state.players[1].hp > state.players[0].hp ? 1 : null);
+        state.winReason = state.winner == null ? 'デッドロック（HP同数・引き分け）' : 'デッドロック（HP比較）';
+        state.matchResult = {type:'deadlock', winner:state.winner, turn:state.turn};
+        addLog(state, `【デッドロック】連続4ターン状態変化なし。${state.winReason}`);
+      }
+    }
+
+    // =========================================================================
+    // 4. 所在整合性検査（87 + 32 + 20 = 139枚）
+    // =========================================================================
+    function checkIntegrity(state) {
+      const seen = new Set();
+      const errors = [];
+      const located = [];
+      const addCheck = (uid, where) => {
+        if (uid == null) return;
+        if (!Number.isInteger(uid) || uid < 1 || uid > state.cards.length) {
+          errors.push(`不正UID:${uid} (${where})`); return;
+        }
+        if (seen.has(uid)) errors.push(`物理カード重複:${uid} (${where})`);
+        else { seen.add(uid); located.push(uid); }
+      };
+      state.deck.forEach(uid => addCheck(uid, '共有デッキ'));
+      state.discard.forEach(uid => addCheck(uid, '共有捨て札'));
+      state.standbyBase.forEach(uid => addCheck(uid, '基本待機'));
+      state.standbyAlc.forEach(uid => addCheck(uid, '錬成待機'));
+      state.standbyOff.forEach(uid => addCheck(uid, '供物待機'));
+      state.players.forEach((p, side) => {
+        p.hand.forEach(uid => addCheck(uid, `手札${side}`));
+        p.field.forEach(uid => {
+          addCheck(uid, `場${side}`);
+          const c = getCard(state, uid);
+          (c.stackedCards || []).forEach(sUid => addCheck(sUid, `装備${uid}`));
+        });
+        addCheck(p.altarUid, `祭壇${side}`);
+        p.cauldrons.forEach(c => {
+          addCheck(c.potUid, `釜${side}`);
+          c.upgrades.forEach(uid => addCheck(uid, `釜強化${side}`));
+          c.attachments.forEach(uid => addCheck(uid, `釜付属${side}`));
+          c.contents.forEach(uid => addCheck(uid, `釜中身${side}`));
+        });
+        if (p.shelf) {
+          addCheck(p.shelf.cardUid, `保管棚${side}`);
+          p.shelf.upgrades.forEach(uid => addCheck(uid, `棚強化${side}`));
+          p.shelf.contents.forEach(uid => addCheck(uid, `棚中身${side}`));
+        }
+      });
+      if (seen.size !== state.cards.length) {
+        const missing = state.cards.filter(c => !seen.has(c.uid)).map(c => `${c.uid}:${c.name}`);
+        errors.push(`所在枚数:${seen.size}/${state.cards.length}（所在不明:${missing.join(',')}）`);
+      }
+      const counts = {base:0,alchemy:0,offering:0};
+      located.forEach(uid => {
+        const sys = CARD_DEFS[getCard(state,uid).name]?.system;
+        if (sys === 'base') counts.base++;
+        else if (sys === 'alchemy') counts.alchemy++;
+        else if (sys === 'offering') counts.offering++;
+        else errors.push(`所属不明カード:${uid}`);
+      });
+      if (counts.base !== 87) errors.push(`基本セット所在:${counts.base}/87`);
+      if (counts.alchemy !== 32) errors.push(`錬成所在:${counts.alchemy}/32`);
+      if (counts.offering !== 20) errors.push(`供物所在:${counts.offering}/20`);
+      state.integrityErrors = errors;
+      if (errors.length) {
+        console.error('所在整合性エラー:', errors);
+        addLog(state, `【整合性エラー】${errors.join('／')}`);
+        return false;
+      }
+      return true;
+    }
+
+    // =========================================================================
+    // 5. デッキ再構築（第6章）とドロー
+    // =========================================================================
+    function rebuildDeck(state) {
+      if (state.deck.length > 0 || state.discard.length === 0) return false;
+
+      const usedInDiscard = new Set();
+      const usedInStandby = new Set();
+      const triples = [];
+
+      // 1) 超越カードの組（捨て札の上位 + 捨て札の基本 + 待機超越）
+      const upperIndices = [];
+      const basicIndices = [];
+      state.discard.forEach((uid, idx) => {
+        const def = CARD_DEFS[getCard(state, uid).name];
+        if (def.tier === 'upper') upperIndices.push(idx);
+        if (def.tier === 'basic') basicIndices.push(idx);
+      });
+
+      for (const uIdx of upperIndices) {
+        if (usedInDiscard.has(uIdx)) continue;
+        const uCard = getCard(state, state.discard[uIdx]);
+        const uAttrs = CARD_DEFS[uCard.name].attrs;
+
+        for (const bIdx of basicIndices) {
+          if (usedInDiscard.has(bIdx)) continue;
+          const bCard = getCard(state, state.discard[bIdx]);
+          const bAttr = CARD_DEFS[bCard.name].attrs[0];
+          const key = [...uAttrs, bAttr].sort().join('+');
+          const targetTransName = TRANSCEND_RECIPES[key];
+          if (!targetTransName) continue;
+
+          const sIdx = state.standbyBase.findIndex(uid => !usedInStandby.has(uid) && getCard(state, uid).name === targetTransName);
+          if (sIdx !== -1) {
+            const transUid = state.standbyBase[sIdx];
+            usedInDiscard.add(uIdx);
+            usedInDiscard.add(bIdx);
+            usedInStandby.add(transUid);
+            // 12-4-4: 超越カード、上位カード、基本カード
+            triples.push([transUid, uCard.uid, bCard.uid]);
+            break;
+          }
+        }
+      }
+
+      // 2) 上位カードの組（捨て札の基本A + 後ろの基本B + 待機上位）
+      for (let i = 0; i < basicIndices.length; i++) {
+        const aIdx = basicIndices[i];
+        if (usedInDiscard.has(aIdx)) continue;
+        const aCard = getCard(state, state.discard[aIdx]);
+        const aAttr = CARD_DEFS[aCard.name].attrs[0];
+
+        for (let j = i + 1; j < basicIndices.length; j++) {
+          const bIdx = basicIndices[j];
+          if (usedInDiscard.has(bIdx)) continue;
+          const bCard = getCard(state, state.discard[bIdx]);
+          const bAttr = CARD_DEFS[bCard.name].attrs[0];
+          const key = [aAttr, bAttr].sort().join('+');
+          const targetUpperName = UPPER_RECIPES[key];
+          if (!targetUpperName) continue;
+
+          const sIdx = state.standbyBase.findIndex(uid => !usedInStandby.has(uid) && getCard(state, uid).name === targetUpperName);
+          if (sIdx !== -1) {
+            const upperUid = state.standbyBase[sIdx];
+            usedInDiscard.add(aIdx);
+            usedInDiscard.add(bIdx);
+            usedInStandby.add(upperUid);
+            // 12-4-4: 上位カード、基本カードA、基本カードB
+            triples.push([upperUid, aCard.uid, bCard.uid]);
+            break;
+          }
+        }
+      }
+
+      if (triples.length === 0) return false;
+
+      // 捨て札と待機から除去
+      state.discard = state.discard.filter((_, idx) => !usedInDiscard.has(idx));
+      state.standbyBase = state.standbyBase.filter(uid => !usedInStandby.has(uid));
+
+      const pool = triples.flat();
+      const shuffled = deterministicShuffle(state, pool);
+      shuffled.forEach(uid => {
+        const c = getCard(state, uid);
+        c.zone = 'deck';
+        state.deck.push(uid);
+      });
+
+      addLog(state, `共有デッキ再構築！${triples.length}組（計${shuffled.length}枚）を生成してシャッフル`);
+      return true;
+    }
+
+    function drawCard(state, side) {
+      if (state.deck.length === 0) {
+        rebuildDeck(state);
+      }
+      if (state.deck.length === 0) {
+        addLog(state, `${side === 0 ? '先攻' : '後攻'}はデッキ空・再構築不可のためドローなし`);
+        return null;
+      }
+      const uid = state.deck.shift();
+      const card = getCard(state, uid);
+      card.zone = `hand_${side}`;
+      state.players[side].hand.push(uid);
+      addLog(state, `${side === 0 ? '先攻' : '後攻'}が1枚ドロー${side === state.humanSide || PUBLIC_MODE ? `（《${card.name}》）` : ''}`);
+      return uid;
+    }
+
+    // =========================================================================
+    // 6. カード移動・破壊・ダメージ・盾処理
+    // =========================================================================
+    function sendCardToGrave(state, uid) {
+      const card = getCard(state, uid);
+      const def = CARD_DEFS[card.name];
+
+      // 重ねられていたカードを処理
+      if (card.stackedCards && card.stackedCards.length > 0) {
+        const stacked = [...card.stackedCards];
+        card.stackedCards = [];
+        stacked.forEach(sUid => {
+          const sCard = getCard(state, sUid);
+          if (CARD_DEFS[sCard.name].system === 'offering') {
+            returnToOfferingStandby(state, sUid);
+          } else {
+            sendCardToGrave(state, sUid);
+          }
+        });
+      }
+
+      // 場の配列から除去
+      state.players.forEach(p => {
+        p.field = p.field.filter(id => id !== uid);
+      });
+
+      card.shields = 0;
+      card.stage = 0;
+      card.onceUsed = false;
+      card.reservedProduct = false;
+      card.whiteBuffAura = false;
+      card.insuranceMod = 0;
+
+      if (def.system === 'base') {
+        card.zone = 'discard';
+        state.discard.unshift(uid);
+      } else if (def.system === 'alchemy') {
+        if (card.name === '錬成') {
+          const owner = card.code === 'a' ? 0 : 1;
+          card.zone = `cauldron_${owner}`;
+          state.players[owner].cauldrons.unshift({ potUid: uid, activated: true, upgrades: [], attachments: [], attachmentActive: {}, contents: [] });
+        } else {
+          card.zone = 'standby_alc';
+          state.standbyAlc.push(uid);
+        }
+      } else if (def.system === 'offering') {
+        returnToOfferingStandby(state, uid);
+      }
+    }
+
+    function returnToOfferingStandby(state, uid) {
+      const card = getCard(state, uid);
+      state.players.forEach(p => { p.field = p.field.filter(id => id !== uid); });
+      card.shields = 0;
+      card.stage = 0;
+      card.whiteBuffAura = false;
+      if (card.name === '供物') {
+        const owner = card.code === 'a' ? 0 : 1;
+        card.zone = `altar_${owner}`;
+        state.players[owner].altarUid = uid;
+      } else {
+        card.zone = 'standby_off';
+        state.standbyOff.push(uid);
+      }
+    }
+
+    function destroyFieldCard(state, uid, sourceIsOffering = false) {
+      const card = getCard(state, uid);
+      const def = CARD_DEFS[card.name];
+      if (def.system === 'offering' && !sourceIsOffering) {
+        addLog(state, `《${card.name}》は供物耐性により破壊されない`);
+        return false;
+      }
+      addLog(state, `《${card.name}》を破壊`);
+      sendCardToGrave(state, uid);
+      return true;
+    }
+
+    // 与ダメージ加算計算
+    function calcOutgoingBonus(state, attackerSide, sourceCard) {
+      const p = state.players[attackerSide];
+      let bonus = 0;
+      p.field.forEach(uid => {
+        const name = getCard(state, uid).name;
+        if (name === '攻撃×溜撃') bonus += 1;
+        if (name === '猛火の増幅炉：攻撃×攻撃×溜撃') bonus += 3;
+        if (name === '業火の手綱：攻撃×溜撃×溜撃') bonus += 2;
+        if (name === '火を抱く盾：攻撃×溜撃×防御') bonus += 1;
+        if (name === '鋼鉄の燃焼炉：攻撃×溜撃×重鎧') bonus += 1;
+        if (name === '戦場を焼く残火：攻撃×溜撃×対策') bonus += 1;
+        if (name === '災厄の偏向鏡：溜撃×重鎧×対策') bonus += 1;
+        if (name === '与えられた恵みの対価：溜撃×溜撃×腐蝕') bonus += 1;
+      });
+      return bonus;
+    }
+
+    // 被ダメージ軽減計算
+    function calcIncomingReduction(state, targetSide, sourceSide, sourceCard, isPiercing) {
+      const p = state.players[targetSide];
+      let red = 0;
+
+      // 白バフオーラ完全無効化
+      if (p.field.some(uid => getCard(state, uid).whiteBuffAura)) {
+        return 999;
+      }
+      // 《手札を食らう絶対障壁》
+      if (sourceSide !== targetSide && p.field.some(uid => getCard(state, uid).name === '手札を食らう絶対障壁：防御×重鎧×重鎧')) {
+        return 999;
+      }
+
+      const hasPierceNull = p.field.some(uid => getCard(state, uid).name === '防御×重鎧');
+      const effectivePierce = isPiercing && !hasPierceNull;
+
+      p.field.forEach(uid => {
+        const name = getCard(state, uid).name;
+        if (effectivePierce) {
+          // 貫通時は《溜撃》と《防御》の両方を含むカードの軽減のみ適用
+          if (name === '溜撃×防御' && sourceSide !== targetSide) red += 1;
+          if (name === '静謐なる二重殻：溜撃×防御×防御') {
+            if (sourceSide !== targetSide) red += 1;
+            if (sourceSide === targetSide && sourceCard && (CARD_DEFS[sourceCard.name].attrs.includes('攻撃') || CARD_DEFS[sourceCard.name].attrs.includes('溜撃'))) red += 1;
+          }
+        } else {
+          if (sourceSide !== targetSide) {
+            if (name === '攻撃×重鎧') red += 2;
+            if (name === '溜撃×防御') red += 1;
+            if (name === '燃え尽きる重砲：攻撃×攻撃×重鎧') red += 2;
+            if (name === '鋼鉄の燃焼炉：攻撃×溜撃×重鎧') red += 1;
+            if (name === '絶対防御からの一撃：攻撃×重鎧×重鎧') red += 6;
+            if (name === '静謐なる二重殻：溜撃×防御×防御') red += 1;
+            if (name === '生贄を要する巨城：重鎧×重鎧×対策') red += 6;
+            if (name === '回収機構付き重装甲：重鎧×重鎧×腐蝕') red += 1;
+          }
+          // 自傷軽減
+          if (sourceSide === targetSide && sourceCard && (CARD_DEFS[sourceCard.name].attrs.includes('攻撃') || CARD_DEFS[sourceCard.name].attrs.includes('溜撃'))) {
+            if (['攻撃×溜撃','業火の手綱：攻撃×溜撃×溜撃','火を抱く盾：攻撃×溜撃×防御','鋼鉄の燃焼炉：攻撃×溜撃×重鎧','戦場を焼く残火：攻撃×溜撃×対策','静謐なる二重殻：溜撃×防御×防御','与えられた恵みの対価：溜撃×溜撃×腐蝕'].includes(name)) {
+              red += 1;
+            }
+          }
+        }
+      });
+
+      // 錬成防御の軽減
+      if (!effectivePierce && p.alcDefenseShield > 0) {
+        red += p.alcDefenseShield;
+      }
+      return red;
+    }
+
+    // 利用可能な盾リスト取得
+    function getAvailableShields(state, targetSide, isPiercing) {
+      const p = state.players[targetSide];
+      const hasPierceNull = p.field.some(uid => getCard(state, uid).name === '防御×重鎧');
+      const effectivePierce = isPiercing && !hasPierceNull;
+      const shields = [];
+
+      // 通常の場の盾
+      p.field.forEach(uid => {
+        const c = getCard(state, uid);
+        if (c.shields > 0) {
+          if (!effectivePierce) {
+            shields.push({ type: 'field', uid, label: `《${c.name}》の盾（残${c.shields}）` });
+          } else if (c.isPierceShield) {
+            shields.push({ type: 'field', uid, label: `《${c.name}》の貫通対応盾` });
+          }
+        }
+        // 《重鎧×対策》の下の重ねカード
+        if (!effectivePierce && c.name === '重鎧×対策' && c.stackedCards.length > 0) {
+          shields.push({ type: 'stacked_shield', parentUid: uid, uid: c.stackedCards[0], label: `《重鎧×対策》の下の重ね盾` });
+        }
+      });
+
+      // 《錬成×重鎧》の貫通対応盾
+      p.cauldrons.forEach((caul, idx) => {
+        caul.upgrades.forEach(uUid => {
+          const uCard = getCard(state, uUid);
+          if (uCard.name.includes('重鎧')) {
+            shields.push({ type: 'alc_armor', cauldronIdx: idx, uid: uUid, label: `釜強化《${uCard.name}》の貫通対応盾` });
+          }
+        });
+      });
+
+      return shields;
+    }
+
+    // ダメージ適用（CPUは自動判断、プレイヤーで盾選択可能ならプロンプト化も可）
+    function dealDamage(state, targetSide, amount, opts = {}) {
+      const { sourceSide = targetSide, sourceCard = null, isPiercing = false, label = 'ダメージ' } = opts;
+      if (amount <= 0) return;
+
+      const p = state.players[targetSide];
+      const red = calcIncomingReduction(state, targetSide, sourceSide, sourceCard, isPiercing);
+      if (red >= 999) {
+        addLog(state, `${targetSide === 0 ? '先攻' : '後攻'}への${label}(${amount}点)は無効化された`);
+        return;
+      }
+
+      const finalDmg = Math.max(0, amount - red);
+      if (finalDmg === 0) {
+        addLog(state, `${targetSide === 0 ? '先攻' : '後攻'}への${label}(${amount}点)は軽減により0になった`);
+        return;
+      }
+
+      const shields = getAvailableShields(state, targetSide, isPiercing);
+      if (shields.length > 0) {
+        // 第11章 11-2 の盾判断基準を適用（プレイヤー操作時もスムーズ検証のため最適盾判断、または選択肢で選べる形）
+        const mustDefend = p.hp - finalDmg <= 0;
+        const shouldDefend = mustDefend || (shields.length === 1 ? finalDmg >= 4 : finalDmg >= 2);
+        if (shouldDefend) {
+          // 優先順で盾消費：①棘の二重防壁 → ②通常盾 → ③錬成重鎧 → ④継続系
+          shields.sort((a, b) => {
+            const score = (s) => {
+              const n = getCard(state, s.uid).name;
+              if (n === '棘の二重防壁：攻撃×防御×防御') return 1;
+              if (n === '溜撃×防御×重鎧') return 3;
+              if (s.type === 'alc_armor') return 4;
+              if (n === '絶え間なき雫の盾：溜撃×溜撃×防御') return 5;
+              return 2;
+            };
+            return score(a) - score(b);
+          });
+          const chosen = shields[0];
+          consumeShield(state, targetSide, chosen, sourceSide);
+          addLog(state, `${targetSide === 0 ? '先攻' : '後攻'}が${chosen.label}で${finalDmg}ダメージを防いだ！`);
+          return;
+        }
+      }
+
+      const prevHp = p.hp;
+      p.hp -= finalDmg;
+      addLog(state, `${targetSide === 0 ? '先攻' : '後攻'}に${isPiercing ? '貫通' : ''}${finalDmg}ダメージ（HP: ${prevHp} → ${p.hp}）`);
+    }
+
+    function consumeShield(state, targetSide, shieldObj, attackerSide) {
+      if (shieldObj.type === 'field') {
+        const c = getCard(state, shieldObj.uid);
+        c.shields = Math.max(0, c.shields - 1);
+        c.isPierceShield = false;
+        if (c.name === '棘の二重防壁：攻撃×防御×防御' && attackerSide !== targetSide) {
+          addLog(state, `《棘の二重防壁》の反射で相手へ1ダメージ！`);
+          dealDamage(state, attackerSide, 1, { sourceSide: targetSide, sourceCard: c, label: '反射' });
+        }
+        if (c.shields === 0 && !['攻防一体の重砲：攻撃×攻撃×防御','守護者の重槍：攻撃×防御×対策','火を抱く盾：攻撃×溜撃×防御','絶え間なき雫の盾：溜撃×溜撃×防御','再利用の防壁：防御×重鎧×腐蝕'].includes(c.name)) {
+          sendCardToGrave(state, c.uid);
+        }
+      } else if (shieldObj.type === 'stacked_shield') {
+        const parent = getCard(state, shieldObj.parentUid);
+        parent.stackedCards = parent.stackedCards.filter(id => id !== shieldObj.uid);
+        sendCardToGrave(state, shieldObj.uid);
+      } else if (shieldObj.type === 'alc_armor') {
+        const caul = state.players[targetSide].cauldrons[shieldObj.cauldronIdx];
+        if (caul) {
+          caul.upgrades = caul.upgrades.filter(id => id !== shieldObj.uid);
+        }
+        sendCardToGrave(state, shieldObj.uid);
+      }
+    }
+
+    // =========================================================================
+    // 7. 勝敗判定・開始フェイズ処理
+    // =========================================================================
+    function checkWinCondition(state) {
+      const p0 = state.players[0];
+      const p1 = state.players[1];
+      const active = state.activeSide;
+      const other = 1 - active;
+
+      // 《最後の保険》チェック
+      [active, other].forEach(s => {
+        if (state.players[s].hp <= 0) {
+          const insUid = state.players[s].field.find(uid => getCard(state, uid).name === '最後の保険：防御×対策×腐蝕');
+          if (insUid) {
+            const insCard = getCard(state, insUid);
+            const targetHp = 4 + (insCard.insuranceMod || 0);
+            state.players[s].hp = targetHp;
+            addLog(state, `${s === 0 ? '先攻' : '後攻'}の《最後の保険》発動！HPを${targetHp}にして自壊`);
+            sendCardToGrave(state, insUid);
+          }
+        }
+      });
+
+      if (state.players[active].hp <= 0 && state.players[other].hp <= 0) {
+        state.phase = 'gameover';
+        state.winner = active; // 第5章 5-4：同時0以下は現在ターンプレイヤー勝利
+        state.winReason = '同時HP0以下（ターンプレイヤー優先勝利）';
+        state.matchResult = {type:'win', winner:state.winner, turn:state.turn, reason:state.winReason};
+        addLog(state, `【試合終了】${state.winner === 0 ? '先攻' : '後攻'}勝利／${state.winReason}`);
+        return true;
+      }
+      if (state.players[other].hp <= 0) {
+        state.phase = 'gameover';
+        state.winner = active;
+        state.winReason = '相手のHPを0以下にした';
+        state.matchResult = {type:'win', winner:state.winner, turn:state.turn, reason:state.winReason};
+        addLog(state, `【試合終了】${state.winner === 0 ? '先攻' : '後攻'}勝利／${state.winReason}`);
+        return true;
+      }
+      if (state.players[active].hp <= 0) {
+        state.phase = 'gameover';
+        state.winner = other;
+        state.winReason = '自傷・コスト等によりHPが0以下になった';
+        state.matchResult = {type:'win', winner:state.winner, turn:state.turn, reason:state.winReason};
+        addLog(state, `【試合終了】${state.winner === 0 ? '先攻' : '後攻'}勝利／${state.winReason}`);
+        return true;
+      }
+      return false;
+    }
+
+    function beginActiveTurn(state) {
+      state.phase = 'start';
+      addLog(state, `【開始フェイズ】${state.activeSide === 0 ? '先攻' : '後攻'}`);
+      runStartPhase(state);
+      if (checkWinCondition(state)) return false;
+      state.phase = 'draw';
+      addLog(state, '【ドローフェイズ】');
+      drawCard(state, state.activeSide);
+      if (checkWinCondition(state)) return false;
+      state.phase = 'action';
+      addLog(state, `【行動フェイズ開始】${state.activeSide === 0 ? '先攻' : '後攻'}／手札${state.players[state.activeSide].hand.length}枚`);
+      checkIntegrity(state);
+      return true;
+    }
+
+    function runStartPhase(state) {
+      const side = state.activeSide;
+      const opp = 1 - side;
+      const p = state.players[side];
+      p.alcDefenseShield = 0;
+      p.usedOfferingGenThisTurn = false;
+      p.usedFreeCardEffectThisTurn = false;
+
+      // 場の予約・開始フェイズ効果を配置順に処理
+      const snapshotField = [...p.field];
+      for (const uid of snapshotField) {
+        if (!p.field.includes(uid)) continue;
+        const c = getCard(state, uid);
+        if (c.turnPlaced >= state.turn) continue;
+
+        const hasEquipPierce = c.stackedCards.some(sUid => ['溜撃×重鎧','供物×攻撃×防御'].includes(getCard(state, sUid).name));
+        const bonus = calcOutgoingBonus(state, side, c);
+
+        if (c.name === '攻撃') {
+          dealDamage(state, opp, 6 + bonus, { sourceSide: side, sourceCard: c, isPiercing: hasEquipPierce, label: '《攻撃》' });
+          sendCardToGrave(state, uid);
+        } else if (c.name === '溜撃') {
+          if (c.stage === 0) {
+            c.stage = 1;
+            const mirror = p.field.some(id => getCard(state, id).name === '災厄の偏向鏡：溜撃×重鎧×対策');
+            if (!mirror) dealDamage(state, side, 1, { sourceSide: side, sourceCard: c, label: '《溜撃》1段目自傷' });
+            dealDamage(state, opp, 1 + bonus, { sourceSide: side, sourceCard: c, label: '《溜撃》1段目' });
+          } else {
+            dealDamage(state, opp, 5 + bonus, { sourceSide: side, sourceCard: c, isPiercing: hasEquipPierce, label: '《溜撃》2段目' });
+            sendCardToGrave(state, uid);
+          }
+        } else if (c.name === '攻撃×防御') {
+          const oppHasIncoming = state.players[opp].field.some(id => ['攻撃','溜撃','攻撃×重鎧','攻撃×対策','攻防一体の重砲：攻撃×攻撃×防御','燃え尽きる重砲：攻撃×攻撃×重鎧'].includes(getCard(state, id).name));
+          if (oppHasIncoming && c.shields === 0) {
+            c.shields = 1;
+            c.onceUsed = true;
+            addLog(state, `《攻撃×防御》は盾1つを得る選択をした`);
+          } else if (!c.onceUsed) {
+            dealDamage(state, opp, 4 + bonus, { sourceSide: side, sourceCard: c, isPiercing: hasEquipPierce, label: '《攻撃×防御》' });
+            sendCardToGrave(state, uid);
+          }
+        } else if (c.name === '攻撃×重鎧') {
+          dealDamage(state, opp, 2 + bonus, { sourceSide: side, sourceCard: c, isPiercing: hasEquipPierce, label: '《攻撃×重鎧》' });
+          sendCardToGrave(state, uid);
+        } else if (c.name === '攻撃×対策') {
+          dealDamage(state, opp, 3 + bonus, { sourceSide: side, sourceCard: c, isPiercing: true, label: '《攻撃×対策》' });
+          sendCardToGrave(state, uid);
+        } else if (c.name === '溜撃×対策') {
+          const baseDmg = c.stackedCards.length > 0 ? 4 : 1;
+          dealDamage(state, opp, baseDmg + bonus, { sourceSide: side, sourceCard: c, isPiercing: true, label: '《溜撃×対策》' });
+          sendCardToGrave(state, uid);
+        } else if (c.name === '防御×腐蝕') {
+          sendCardToGrave(state, uid);
+        } else if (c.name === '攻防一体の重砲：攻撃×攻撃×防御' && !c.onceUsed) {
+          c.onceUsed = true;
+          dealDamage(state, opp, 6 + bonus, { sourceSide: side, sourceCard: c, isPiercing: hasEquipPierce, label: '《攻防一体の重砲》' });
+        } else if (c.name === '燃え尽きる重砲：攻撃×攻撃×重鎧') {
+          dealDamage(state, opp, 6 + bonus, { sourceSide: side, sourceCard: c, isPiercing: hasEquipPierce, label: '《燃え尽きる重砲》' });
+          sendCardToGrave(state, uid);
+        } else if (c.name === '二連の穿孔撃：攻撃×攻撃×対策') {
+          if (c.stage === 0) {
+            c.stage = 1;
+            dealDamage(state, opp, 2 + bonus, { sourceSide: side, sourceCard: c, isPiercing: true, label: '《二連の穿孔撃》1段目' });
+          } else {
+            dealDamage(state, opp, 2 + bonus, { sourceSide: side, sourceCard: c, isPiercing: true, label: '《二連の穿孔撃》2段目' });
+            sendCardToGrave(state, uid);
+          }
+        } else if (c.name === '守護者の重槍：攻撃×防御×対策' && !c.onceUsed) {
+          c.onceUsed = true;
+          dealDamage(state, opp, 3 + bonus, { sourceSide: side, sourceCard: c, isPiercing: true, label: '《守護者の重槍》' });
+        } else if (c.name === '絶対防御からの一撃：攻撃×重鎧×重鎧') {
+          dealDamage(state, opp, 2 + bonus, { sourceSide: side, sourceCard: c, isPiercing: hasEquipPierce, label: '《絶対防御からの一撃》' });
+          sendCardToGrave(state, uid);
+        } else if (c.name === '自らを削る貫き：攻撃×対策×対策') {
+          dealDamage(state, opp, 3 + bonus, { sourceSide: side, sourceCard: c, isPiercing: true, label: '《自らを削る貫き》' });
+          sendCardToGrave(state, uid);
+        } else if (c.name === '絶え間なき雫の盾：溜撃×溜撃×防御') {
+          dealDamage(state, opp, 1 + bonus, { sourceSide: side, sourceCard: c, isPiercing: hasEquipPierce, label: '《絶え間なき雫の盾》' });
+        } else if (c.name === '時限式穿孔爆弾：溜撃×溜撃×対策') {
+          c.stage += 1;
+          if (c.stage >= 3) {
+            dealDamage(state, opp, 3 + bonus, { sourceSide: side, sourceCard: c, isPiercing: true, label: '《時限式穿孔爆弾》爆発' });
+            sendCardToGrave(state, uid);
+          }
+        } else if (c.name === '白き切り札の召喚：重鎧×対策×対策') {
+          sendCardToGrave(state, uid);
+        } else if (c.name === '生贄を要する巨城：重鎧×重鎧×対策') {
+          const sacrifice = p.field.find(id => id !== uid && CARD_DEFS[getCard(state, id).name].system === 'base');
+          if (sacrifice) destroyFieldCard(state, sacrifice);
+        } else if (c.name === '手札装填の発射機：攻撃×重鎧×対策' && c.stackedCards.length > 0) {
+          const ammoUid = c.stackedCards.shift();
+          dealDamage(state, opp, 6 + bonus, { sourceSide: side, sourceCard: c, isPiercing: hasEquipPierce, label: '《手札装填の発射機》砲弾' });
+          sendCardToGrave(state, ammoUid);
+        }
+      }
+
+      // 釜の予約済み錬成品（錬成攻撃・錬成対策）の処理
+      p.cauldrons.forEach(caul => {
+        const reserved = caul.contents.filter(id => getCard(state, id).reservedProduct);
+        reserved.forEach(rUid => {
+          const rCard = getCard(state, rUid);
+          caul.contents = caul.contents.filter(id => id !== rUid);
+          if (rCard.name === '錬成攻撃') {
+            const bonus = calcOutgoingBonus(state, side, rCard);
+            dealDamage(state, opp, 6 + bonus, { sourceSide: side, sourceCard: rCard, isPiercing: true, label: '《錬成攻撃》発射' });
+          } else if (rCard.name === '錬成対策') {
+            addLog(state, `《錬成対策》発動！相手の場・釜・保管棚を全破壊！`);
+            [...state.players[opp].field].forEach(fUid => destroyFieldCard(state, fUid, false));
+            state.players[opp].cauldrons.forEach(oppCaul => {
+              [...oppCaul.contents, ...oppCaul.attachments, ...oppCaul.upgrades].forEach(id => sendCardToGrave(state, id));
+              oppCaul.contents = [];
+              oppCaul.attachments = [];
+              oppCaul.upgrades = [];
+              oppCaul.attachmentActive = {};
+            });
+            if (state.players[opp].shelf) {
+              const sh = state.players[opp].shelf;
+              [...sh.contents, ...sh.upgrades, sh.cardUid].forEach(id => sendCardToGrave(state, id));
+              state.players[opp].shelf = null;
+            }
+          }
+          sendCardToGrave(state, rUid);
+        });
+      });
+
+      // 《手札を食らう絶対障壁》維持チェック
+      const wallUid = p.field.find(uid => getCard(state, uid).name === '手札を食らう絶対障壁：防御×重鎧×重鎧');
+      if (wallUid && getCard(state, wallUid).turnPlaced < state.turn) {
+        if (p.hand.length > 0) {
+          const dropUid = p.hand.pop();
+          sendCardToGrave(state, dropUid);
+          addLog(state, `《手札を食らう絶対障壁》維持のため手札1枚を捨てた`);
+        } else {
+          sendCardToGrave(state, wallUid);
+          addLog(state, `手札0枚のため《手札を食らう絶対障壁》は自壊`);
+        }
+      }
+    }
+
+    // =========================================================================
+    // 8. 合法アクション生成（ver.2.4書式＋全システム対応）
+    // =========================================================================
+    function getColorDot(name) {
+      const attrs = CARD_DEFS[name].attrs;
+      return ATTR_DOTS[attrs[0]] || '⚪';
+    }
+
+    function formatColoredCardName(name) {
+      const def = CARD_DEFS[name];
+      if (!def) return name;
+      // 固有冠名＋属性構成の分離対応
+      if (name.includes('：')) {
+        const [title, formula] = name.split('：');
+        const parts = formula.split('×').map(a => `<strong style="color:${ATTR_COLORS[a] || '#fff'}">${a}</strong>`);
+        return `<strong class="text-white">${title}：</strong>${parts.join('<span class="text-slate-400">×</span>')}`;
+      }
+      const parts = name.split('×').map(a => `<strong style="color:${ATTR_COLORS[a] || '#fff'}">${a}</strong>`);
+      return parts.join('<span class="text-slate-400">×</span>');
+    }
+
+    function getLegalActions(state, side) {
+      const p = state.players[side];
+      const opp = 1 - side;
+      const oppP = state.players[opp];
+      const actions = [];
+
+      // ターゲット選択待ちプロンプト中
+      if (state.pendingPrompt) {
+        return state.pendingPrompt.options;
+      }
+
+      // 1. フリーアクション：神の招来（この手番に供物生成をしていない場合）
+      if (!p.usedOfferingGenThisTurn) {
+        const hasAtk2 = p.field.find(id => getCard(state, id).name === '供物×攻撃×攻撃');
+        const hasDef2 = p.field.find(id => getCard(state, id).name === '供物×防御×防御');
+        const hasCtr2 = p.field.find(id => getCard(state, id).name === '供物×対策×対策');
+
+        const canSummon = (targetName) => {
+          return state.standbyBase.some(id => getCard(state, id).name === targetName) ||
+                 state.discard.some(id => getCard(state, id).name === targetName) ||
+                 state.deck.some(id => getCard(state, id).name === targetName);
+        };
+
+        if (hasAtk2 && hasDef2 && canSummon('完全再生の聖鎧：溜撃×重鎧×重鎧')) {
+          actions.push({
+            type: 'summon',
+            targetGod: '完全再生の聖鎧：溜撃×重鎧×重鎧',
+            tributes: [hasAtk2, hasDef2],
+            virtualPriority: 1,
+            html: `🩸<strong class="text-[#fb7185]">神の招来（フリー）</strong>：🩸《供物×攻撃×攻撃》＋🩸《供物×防御×防御》 → 《完全再生の聖鎧：溜撃×重鎧×重鎧》（HPを13に全回復）`
+          });
+        }
+        if (hasAtk2 && hasCtr2 && canSummon('命運の調律者：攻撃×対策×腐蝕')) {
+          actions.push({
+            type: 'summon',
+            targetGod: '命運の調律者：攻撃×対策×腐蝕',
+            tributes: [hasAtk2, hasCtr2],
+            virtualPriority: 1,
+            html: `🩸<strong class="text-[#fb7185]">神の招来（フリー）</strong>：🩸《供物×攻撃×攻撃》＋🩸《供物×対策×対策》 → 《命運の調律者：攻撃×対策×腐蝕》（自分か相手のHPを7に設定）`
+          });
+        }
+        if (hasDef2 && hasCtr2 && canSummon('最後の保険：防御×対策×腐蝕')) {
+          actions.push({
+            type: 'summon',
+            targetGod: '最後の保険：防御×対策×腐蝕',
+            tributes: [hasDef2, hasCtr2],
+            virtualPriority: 1,
+            html: `🩸<strong class="text-[#fb7185]">神の招来（フリー）</strong>：🩸《供物×防御×防御》＋🩸《供物×対策×対策》 → 《最後の保険：防御×対策×腐蝕》（敗北時にHP4で復活）`
+          });
+        }
+      }
+
+      // 2. フリーアクション：場の《対策》《供物×対策》や混色供物の起動
+      p.field.forEach(uid => {
+        const c = getCard(state, uid);
+        if (c.turnPlaced < state.turn) {
+          if (c.name === '対策') {
+            const targets = [
+              ...oppP.field.filter(id => CARD_DEFS[getCard(state, id).name].system !== 'offering'),
+              ...p.field.filter(id => id !== uid && CARD_DEFS[getCard(state, id).name].system !== 'offering')
+            ];
+            if (targets.length > 0) {
+              actions.push({
+                type: 'field_destroy_self',
+                uid,
+                virtualPriority: 14,
+                html: `🟣<strong class="text-[#c084fc]">《対策》</strong>の効果を起動<span class="text-slate-400">（場の他のカード1枚を破壊して自壊）</span>`
+              });
+            }
+          } else if (c.name === '供物×対策') {
+            actions.push({
+              type: 'offering_ctr_destroy',
+              uid,
+              virtualPriority: 10,
+              html: `🩸<strong class="text-[#fb7185]">《供物×対策》</strong>の効果を起動<span class="text-slate-400">（自壊して場のカードを0〜1枚破壊・供物も破壊可能）</span>`
+            });
+          } else if (c.name === '供物×攻撃×対策') {
+            actions.push({
+              type: 'offering_mixed_gamble',
+              uid,
+              virtualPriority: 45,
+              html: `🩸<strong class="text-[#fb7185]">《供物×攻撃×対策》</strong>を起動（フリー）<span class="text-slate-400">（自壊して共有デッキ一番上のカードを使用）</span>`
+            });
+          } else if (c.name === '供物×防御×対策') {
+            const defInGrave = state.discard.filter(id => ['防御','重鎧'].some(a => CARD_DEFS[getCard(state, id).name].attrs.includes(a)));
+            if (defInGrave.length > 0) {
+              actions.push({
+                type: 'offering_mixed_recover',
+                uid,
+                virtualPriority: 28,
+                html: `🩸<strong class="text-[#fb7185]">《供物×防御×対策》</strong>を起動（フリー）<span class="text-slate-400">（捨て札から防御/重鎧1枚を使用し供物待機へ戻る）</span>`
+              });
+            }
+          }
+        }
+      });
+
+      // 3. 通常のカード使用（手札から場に出す）
+      p.hand.forEach(uid => {
+        const c = getCard(state, uid);
+        const def = CARD_DEFS[c.name];
+        if (c.name === '白き切り札の召喚：重鎧×対策×対策' && p.hand.length < 2) return;
+        actions.push({
+          type: 'play_hand',
+          uid,
+          virtualPriority: def.priority || 50,
+          html: `${getColorDot(c.name)}《${formatColoredCardName(c.name)}》を場に出す<span class="text-slate-400">（${def.summary}）</span>`
+        });
+      });
+
+      // 4. 《錬成》の錬成・起動（手札素材／コストがある場合）
+      p.cauldrons.forEach((caul, cIdx) => {
+        const maxSlots = 1 + caul.upgrades.filter(id => getCard(state, id).name.includes('腐蝕')).length;
+        const hasSlot = caul.contents.length < maxSlots;
+
+        // 錬成（素材A: 基本または上位）
+        if (hasSlot) {
+          p.hand.forEach(uid => {
+            const c = getCard(state, uid);
+            const def = CARD_DEFS[c.name];
+            if (def.tier === 'basic' || def.tier === 'upper') {
+              const colorJa = ATTR_TO_COLOR[def.attrs[0]] === 'red' ? '赤' : (ATTR_TO_COLOR[def.attrs[0]] === 'white' ? '白' : '黒');
+              actions.push({
+                type: 'alchemy_synth',
+                cauldronIdx: cIdx,
+                matUid: uid,
+                virtualPriority: 35,
+                html: `🟡<strong class="text-[#eab308]">《錬成》</strong>で錬成する：素材 ${getColorDot(c.name)}《${formatColoredCardName(c.name)}》 ＋ デッキ上1枚<span class="text-slate-400">（${colorJa}＋？の超越/強化/錬成品を釜に生成）</span>`
+              });
+            }
+          });
+        }
+
+        // 中身の起動（手札コスト1枚）
+        if (p.hand.length > 0) {
+          caul.contents.forEach(itemUid => {
+            const item = getCard(state, itemUid);
+            if (item.reservedProduct) return;
+            if (item.name === '錬成×防御×対策' && p.shelf) return; // 保管棚は各プレイヤー1つ
+            const freeTurn = caul.upgrades.some(id => getCard(state, id).name.includes('溜撃'));
+            actions.push({
+              type: 'alchemy_activate_content',
+              cauldronIdx: cIdx,
+              itemUid,
+              freeAction: freeTurn,
+              virtualPriority: item.name === '錬成攻撃' ? 12 : (item.name === '錬成対策' ? 4 : 15),
+              html: `🟡<strong class="text-[#eab308]">《${item.name}》</strong>を起動する${freeTurn ? '（行動権不要）' : ''}<span class="text-slate-400">（手札1枚を捨てて起動：${CARD_DEFS[item.name].summary}）</span>`
+            });
+          });
+
+          // 付属物の起動
+          caul.attachments.forEach(attUid => {
+            if (caul.attachmentActive[attUid]) return;
+            const att = getCard(state, attUid);
+            actions.push({
+              type: 'alchemy_activate_att',
+              cauldronIdx: cIdx,
+              attUid,
+              virtualPriority: 22,
+              html: `🟡<strong class="text-[#eab308]">《${att.name}》</strong>（${CARD_DEFS[att.name].label}）を起動<span class="text-slate-400">（手札1枚コスト：${CARD_DEFS[att.name].summary}）</span>`
+            });
+          });
+        }
+      });
+
+      // 5. 《供物》の生成（HP -2 ＋ 手札1枚捧げる → 3行レイアウト）
+      if (p.hp > 0 && p.hand.length > 0) {
+        p.hand.forEach(uid => {
+          const c = getCard(state, uid);
+          const def = CARD_DEFS[c.name];
+          const colors = def.attrs.map(a => ATTR_TO_COLOR[a]);
+          let targetOffName = null;
+
+          if (def.tier === 'basic') {
+            if (colors[0] === 'red') targetOffName = '供物×攻撃';
+            if (colors[0] === 'white') targetOffName = '供物×防御';
+            if (colors[0] === 'black') targetOffName = '供物×対策';
+          } else if (def.tier === 'upper') {
+            const uniq = [...new Set(colors)].sort();
+            if (uniq.length === 1) {
+              if (uniq[0] === 'red') targetOffName = '供物×攻撃×攻撃';
+              if (uniq[0] === 'white') targetOffName = '供物×防御×防御';
+              if (uniq[0] === 'black') targetOffName = '供物×対策×対策';
+            } else {
+              const pair = uniq.join('+');
+              if (pair === 'red+white') targetOffName = '供物×攻撃×防御';
+              if (pair === 'black+red') targetOffName = '供物×攻撃×対策';
+              if (pair === 'black+white') targetOffName = '供物×防御×対策';
+            }
+          }
+
+          if (targetOffName && state.standbyOff.some(id => getCard(state, id).name === targetOffName)) {
+            const nextHp = p.hp - 2;
+            const info = getOffering3LineSummary(targetOffName);
+            actions.push({
+              type: 'offering_generate',
+              tributeUid: uid,
+              targetOffName,
+              virtualPriority: def.tier === 'upper' ? 25 : 40,
+              isThreeLine: true,
+              line1: `🩸<strong class="text-[#fb7185]">《供物》</strong>で生成する：HP -2（${p.hp}→${nextHp}）＋ ${getColorDot(c.name)}《${formatColoredCardName(c.name)}》を捧げる → 🩸《${formatColoredCardName(targetOffName)}》を場に出す`,
+              line2: info.line2,
+              line3: info.line3
+            });
+          }
+        });
+      }
+
+      // 手札も合法行動も何もない場合はパス
+      if (actions.length === 0) {
+        actions.push({
+          type: 'pass',
+          virtualPriority: 99,
+          html: `⏭️ <strong class="text-slate-200">行動を終了する</strong><span class="text-slate-400">（使用可能なカード・効果がないためターン終了）</span>`
+        });
+      }
+
+      return actions;
+    }
+
+    function getOffering3LineSummary(name) {
+      if (name === '供物×対策') {
+        return {
+          line2: `・<span class="text-slate-400 font-bold">場効果：</span>次の自分の行動フェイズ以降、自壊して場のカードを0〜1枚破壊（供物カードも破壊可能）`,
+          line3: `・<span class="text-[#c084fc] font-bold">黒バフ：</span>神の招来時に合わせて捧げると、《命運の調律者》《最後の保険》の設定値を ±3 する`
+        };
+      }
+      if (name === '供物×防御') {
+        return {
+          line2: `・<span class="text-slate-400 font-bold">場効果：</span>盾を1つ提供し、盾として使うと自壊（供物属性を含むカードによってのみ破壊される）`,
+          line3: `・<span class="text-[#f472b6] font-bold">白バフ：</span>神の招来時に合わせて捧げると、盾・耐性を失い場にある限りダメージ無効化を得る`
+        };
+      }
+      if (name === '供物×攻撃') {
+        return {
+          line2: `・<span class="text-slate-400 font-bold">場効果：</span>盾を1つ提供し、盾として使うと自壊（供物属性を含むカードによってのみ破壊される）`,
+          line3: `・<span class="text-[#f87171] font-bold">赤バフ：</span>神の招来時に合わせて捧げると、招来直後に相手へ貫通 3ダメージ を与える`
+        };
+      }
+      return {
+        line2: `・<span class="text-slate-400 font-bold">場効果：</span>${CARD_DEFS[name].summary}`,
+        line3: `・<span class="text-[#fb7185] font-bold">耐性：</span>供物属性を含むカードによってのみ破壊される`
+      };
+    }
+
+    // =========================================================================
+    // 9. アクション解決実行エンジン
+    // =========================================================================
+    function executeAction(state, side, action) {
+      const p = state.players[side];
+      const opp = 1 - side;
+      const oppP = state.players[opp];
+      let consumesAction = true;
+
+      if (action.type === 'pass') {
+        addLog(state, `${side === 0 ? '先攻' : '後攻'}は行動を行わずターン終了`);
+        return { consumesAction: true };
+      }
+
+      if (action.type === 'play_hand') {
+        const c = getCard(state, action.uid);
+        p.hand = p.hand.filter(id => id !== c.uid);
+        resolvePlayCard(state, side, c, true);
+        return { consumesAction: true };
+      }
+
+      if (action.type === 'field_destroy_self') {
+        const src = getCard(state, action.uid);
+        const targets = [
+          ...oppP.field.filter(id => CARD_DEFS[getCard(state, id).name].system !== 'offering'),
+          ...p.field.filter(id => id !== src.uid && CARD_DEFS[getCard(state, id).name].system !== 'offering')
+        ];
+        if (targets.length > 0) {
+          // 優先度の高い相手カード（または人間選択）を破壊
+          targets.sort((a, b) => (CARD_DEFS[getCard(state, a).name].priority || 50) - (CARD_DEFS[getCard(state, b).name].priority || 50));
+          destroyFieldCard(state, targets[0], false);
+        }
+        sendCardToGrave(state, src.uid);
+        addLog(state, `《対策》の効果で破壊を実行し自壊`);
+        return { consumesAction: false };
+      }
+
+      if (action.type === 'offering_ctr_destroy') {
+        const src = getCard(state, action.uid);
+        const targets = [...oppP.field];
+        if (targets.length > 0) {
+          // 供物カードを最優先破壊
+          targets.sort((a, b) => {
+            const sa = CARD_DEFS[getCard(state, a).name].system === 'offering' ? 0 : 1;
+            const sb = CARD_DEFS[getCard(state, b).name].system === 'offering' ? 0 : 1;
+            return sa - sb;
+          });
+          destroyFieldCard(state, targets[0], true);
+        }
+        sendCardToGrave(state, src.uid);
+        addLog(state, `《供物×対策》を自壊して破壊処理`);
+        return { consumesAction: false };
+      }
+
+      if (action.type === 'offering_mixed_gamble') {
+        const src = getCard(state, action.uid);
+        sendCardToGrave(state, src.uid);
+        if (state.deck.length === 0) rebuildDeck(state);
+        if (state.deck.length > 0) {
+          const topUid = state.deck.shift();
+          const topCard = getCard(state, topUid);
+          addLog(state, `《供物×攻撃×対策》でデッキ上《${topCard.name}》を即使用！`);
+          resolvePlayCard(state, side, topCard, false);
+        }
+        return { consumesAction: false };
+      }
+
+      if (action.type === 'offering_mixed_recover') {
+        const src = getCard(state, action.uid);
+        sendCardToGrave(state, src.uid);
+        const idx = state.discard.findIndex(id => ['防御','重鎧'].some(a => CARD_DEFS[getCard(state, id).name].attrs.includes(a)));
+        if (idx !== -1) {
+          const recUid = state.discard.splice(idx, 1)[0];
+          const recCard = getCard(state, recUid);
+          addLog(state, `《供物×防御×対策》で捨て札から《${recCard.name}》を使用！`);
+          resolvePlayCard(state, side, recCard, false);
+        }
+        return { consumesAction: false };
+      }
+
+      if (action.type === 'alchemy_synth') {
+        const caul = p.cauldrons[action.cauldronIdx];
+        const matA = getCard(state, action.matUid);
+        p.hand = p.hand.filter(id => id !== matA.uid);
+
+        if (state.deck.length === 0) rebuildDeck(state);
+        if (state.deck.length === 0) {
+          sendCardToGrave(state, matA.uid);
+          addLog(state, `共有デッキが空のため錬成不発（素材Aは捨て札へ）`);
+          return { consumesAction: true };
+        }
+
+        const matBUid = state.deck.shift();
+        const matB = getCard(state, matBUid);
+        const attrsA = CARD_DEFS[matA.name].attrs;
+        const attrsB = CARD_DEFS[matB.name].attrs;
+        const totalAttr = attrsA.length + attrsB.length;
+
+        addLog(state, `《錬成》実行：素材《${matA.name}》＋デッキ上《${matB.name}》（属性数合計:${totalAttr}）`);
+        sendCardToGrave(state, matA.uid);
+        sendCardToGrave(state, matB.uid);
+
+        if (totalAttr >= 5) {
+          addLog(state, `属性数合計が5以上のため錬成失敗！`);
+          return { consumesAction: true };
+        }
+
+        const colors = [...attrsA, ...attrsB].map(a => ATTR_TO_COLOR[a]);
+        const counts = { red: 0, white: 0, black: 0 };
+        colors.forEach(col => counts[col]++);
+
+        let targetName = null;
+        let isAttachment = false;
+        let isUpgrade = false;
+
+        if (totalAttr === 2) {
+          const pair = colors.sort().join('+');
+          if (pair === 'red+red') { targetName = '錬成×攻撃×攻撃'; isAttachment = true; }
+          if (pair === 'red+white') { targetName = '錬成×攻撃×防御'; }
+          if (pair === 'black+red') { targetName = '錬成×攻撃×対策'; isAttachment = true; }
+          if (pair === 'white+white') { targetName = '錬成×防御×防御'; isAttachment = true; }
+          if (pair === 'black+white') { targetName = '錬成×防御×対策'; }
+          if (pair === 'black+black') { targetName = '錬成×対策×対策'; isAttachment = true; }
+        } else {
+          const distinctColors = Object.keys(counts).filter(k => counts[k] > 0);
+          if (counts.red >= 3) targetName = '錬成攻撃';
+          else if (counts.white >= 3) targetName = '錬成防御';
+          else if (counts.black >= 3) targetName = '錬成対策';
+          else if (distinctColors.length === 3) {
+            targetName = oppP.hp <= 6 ? '錬成攻撃' : (p.hp <= 5 ? '錬成防御' : '錬成攻撃');
+          } else if (distinctColors.length === 2) {
+            isUpgrade = true;
+            if (totalAttr === 3) {
+              if (counts.red === 2) targetName = '錬成×溜撃';
+              if (counts.white === 2) targetName = '錬成×重鎧';
+              if (counts.black === 2) targetName = '錬成×腐蝕';
+            } else {
+              if (counts.red === 2 && counts.white === 2) targetName = '錬成×溜撃×重鎧';
+              if (counts.red === 2 && counts.black === 2) targetName = '錬成×溜撃×腐蝕';
+              if (counts.white === 2 && counts.black === 2) targetName = '錬成×重鎧×腐蝕';
+            }
+          }
+        }
+
+        const stIdx = state.standbyAlc.findIndex(id => getCard(state, id).name === targetName);
+        if (stIdx === -1) {
+          addLog(state, `錬成待機に《${targetName}》が在庫切れのため錬成失敗`);
+          return { consumesAction: true };
+        }
+
+        const genUid = state.standbyAlc.splice(stIdx, 1)[0];
+        const genCard = getCard(state, genUid);
+        genCard.zone = `cauldron_${side}`;
+        if (isUpgrade) caul.upgrades.push(genUid);
+        else if (isAttachment) caul.attachments.push(genUid);
+        else caul.contents.push(genUid);
+
+        addLog(state, `錬成成功！釜に《${genCard.name}》を生成`);
+        return { consumesAction: true };
+      }
+
+      if (action.type === 'alchemy_activate_content') {
+        const caul = p.cauldrons[action.cauldronIdx];
+        const costUid = p.hand.pop();
+        sendCardToGrave(state, costUid);
+        const item = getCard(state, action.itemUid);
+
+        if (item.name === '錬成攻撃' || item.name === '錬成対策') {
+          item.reservedProduct = true;
+          addLog(state, `《${item.name}》を起動し予約（次の開始フェイズに発動）`);
+        } else if (item.name === '錬成防御') {
+          caul.contents = caul.contents.filter(id => id !== item.uid);
+          p.alcDefenseShield += 6;
+          sendCardToGrave(state, item.uid);
+          addLog(state, `《錬成防御》を起動！次の自分の出番終了まで被ダメージ6軽減`);
+        } else if (item.name === '錬成×攻撃×防御') {
+          caul.contents = caul.contents.filter(id => id !== item.uid);
+          p.cauldrons.push({ potUid: item.uid, activated: true, upgrades: [], attachments: [], attachmentActive: {}, contents: [] });
+          addLog(state, `《錬成×攻撃×防御》を起動し、独立した2つ目の器に拡張！`);
+        } else if (item.name === '錬成×防御×対策') {
+          caul.contents = caul.contents.filter(id => id !== item.uid);
+          item.zone = `shelf_${side}`;
+          p.shelf = { cardUid: item.uid, upgrades: [], contents: [] };
+          addLog(state, `《錬成×防御×対策》を起動し、保管棚を設置！`);
+        }
+        return { consumesAction: !action.freeAction };
+      }
+
+      if (action.type === 'alchemy_activate_att') {
+        const caul = p.cauldrons[action.cauldronIdx];
+        const costUid = p.hand.pop();
+        sendCardToGrave(state, costUid);
+        const att = getCard(state, action.attUid);
+
+        if (att.name === '錬成×対策×対策') {
+          caul.attachments = caul.attachments.filter(id => id !== att.uid);
+          sendCardToGrave(state, att.uid);
+          if (oppP.cauldrons.length > 0) {
+            const victim = oppP.cauldrons[oppP.cauldrons.length - 1];
+            [...victim.contents, ...victim.attachments, ...victim.upgrades].forEach(id => sendCardToGrave(state, id));
+            victim.contents = [];
+            victim.attachments = [];
+            victim.upgrades = [];
+            victim.attachmentActive = {};
+            if (oppP.cauldrons.length > 1) {
+              oppP.cauldrons.pop();
+              sendCardToGrave(state, victim.potUid);
+            }
+            addLog(state, `《対抗札》起動！相手の釜を破壊！`);
+          }
+        } else {
+          caul.attachmentActive[att.uid] = true;
+          addLog(state, `付属物《${att.name}》（${CARD_DEFS[att.name].label}）を起動！`);
+        }
+        return { consumesAction: true };
+      }
+
+      if (action.type === 'offering_generate') {
+        p.hp -= 2;
+        p.usedOfferingGenThisTurn = true;
+        p.hand = p.hand.filter(id => id !== action.tributeUid);
+        const tribCard = getCard(state, action.tributeUid);
+        sendCardToGrave(state, tribCard.uid);
+
+        const stIdx = state.standbyOff.findIndex(id => getCard(state, id).name === action.targetOffName);
+        const offUid = state.standbyOff.splice(stIdx, 1)[0];
+        const offCard = getCard(state, offUid);
+        offCard.zone = `field_${side}`;
+        offCard.turnPlaced = state.turn;
+        if (['供物×攻撃','供物×防御'].includes(offCard.name)) offCard.shields = 1;
+        p.field.push(offUid);
+
+        addLog(state, `🩸《供物》生成：HP-2（残${p.hp}）＋《${tribCard.name}》を捧げ、場へ《${offCard.name}》を展開`);
+
+        // 相手場の《迎撃の警戒網：防御×防御×対策》反応チェック
+        if (offCard.name.includes('攻撃') && oppP.field.some(id => getCard(state, id).name === '迎撃の警戒網：防御×防御×対策')) {
+          addLog(state, `相手の《迎撃の警戒網》が反応！3ダメージ`);
+          dealDamage(state, side, 3, { sourceSide: opp, label: '《迎撃の警戒網》反応' });
+        }
+        return { consumesAction: true };
+      }
+
+      if (action.type === 'summon') {
+        action.tributes.forEach(tUid => returnToOfferingStandby(state, tUid));
+
+        // 合わせ捧げバフ（下位供物カード）自動判定
+        const lowerUids = p.field.filter(id => CARD_DEFS[getCard(state, id).name].tier === 'lower');
+        let usedRedBuff = false;
+        let usedWhiteBuff = false;
+        let usedBlackBuff = false;
+
+        lowerUids.forEach(lUid => {
+          const lCard = getCard(state, lUid);
+          if (lCard.name === '供物×攻撃' && !usedRedBuff && action.targetGod !== '最後の保険：防御×対策×腐蝕') {
+            usedRedBuff = true;
+            returnToOfferingStandby(state, lUid);
+          } else if (lCard.name === '供物×防御' && !usedWhiteBuff && action.targetGod !== '命運の調律者：攻撃×対策×腐蝕') {
+            usedWhiteBuff = true;
+            lCard.shields = 0;
+            lCard.whiteBuffAura = true;
+          } else if (lCard.name === '供物×対策' && !usedBlackBuff && action.targetGod !== '完全再生の聖鎧：溜撃×重鎧×重鎧') {
+            usedBlackBuff = true;
+            returnToOfferingStandby(state, lUid);
+          }
+        });
+
+        // 対象超越カードを待機・捨て札・デッキから取得
+        let godUid = null;
+        for (const arr of [state.standbyBase, state.discard, state.deck]) {
+          const idx = arr.findIndex(id => getCard(state, id).name === action.targetGod);
+          if (idx !== -1) {
+            godUid = arr.splice(idx, 1)[0];
+            break;
+          }
+        }
+        const godCard = getCard(state, godUid);
+        addLog(state, `🩸神の招来！《${godCard.name}》を降臨させた！`);
+
+        if (godCard.name === '完全再生の聖鎧：溜撃×重鎧×重鎧') {
+          p.hp = 13;
+          addLog(state, `《完全再生の聖鎧》効果：HPが13に全回復！`);
+          sendCardToGrave(state, godUid);
+        } else if (godCard.name === '命運の調律者：攻撃×対策×腐蝕') {
+          const targetVal = usedBlackBuff ? 4 : 7;
+          oppP.hp = targetVal;
+          addLog(state, `《命運の調律者》効果：相手のHPを${targetVal}に設定！`);
+          sendCardToGrave(state, godUid);
+        } else if (godCard.name === '最後の保険：防御×対策×腐蝕') {
+          godCard.zone = `field_${side}`;
+          godCard.turnPlaced = state.turn;
+          godCard.insuranceMod = usedBlackBuff ? 3 : 0;
+          p.field.push(godUid);
+          addLog(state, `《最後の保険》が場に着地（発動時HP:${4 + godCard.insuranceMod}）`);
+        }
+
+        if (usedRedBuff) {
+          addLog(state, `赤バフ《供物×攻撃》効果：相手へ貫通3ダメージ！`);
+          dealDamage(state, opp, 3, { sourceSide: side, isPiercing: true, label: '赤バフ貫通' });
+        }
+        if (usedWhiteBuff) {
+          addLog(state, `白バフ《供物×防御》効果：ダメージ完全無効化オーラ獲得！`);
+        }
+        return { consumesAction: false };
+      }
+
+      return { consumesAction };
+    }
+
+    // カード着地＋即時効果解決
+    function resolvePlayCard(state, side, card, isNormalPlay) {
+      const p = state.players[side];
+      const opp = 1 - side;
+      const oppP = state.players[opp];
+
+      card.zone = `field_${side}`;
+      card.turnPlaced = state.turn;
+      p.field.push(card.uid);
+      addLog(state, `${side === 0 ? '先攻' : '後攻'}が《${card.name}》を場に出した`);
+
+      // 相手の《迎撃の警戒網》反応（通常使用かつ攻撃/溜撃含む場合）
+      if (isNormalPlay && (card.name.includes('攻撃') || card.name.includes('溜撃'))) {
+        if (oppP.field.some(id => getCard(state, id).name === '迎撃の警戒網：防御×防御×対策')) {
+          addLog(state, `相手の《迎撃の警戒網》反応！3ダメージ`);
+          dealDamage(state, side, 3, { sourceSide: opp, label: '《迎撃の警戒網》' });
+        }
+      }
+
+      // 永続盾付与
+      if (['防御','重鎧','攻防一体の重砲：攻撃×攻撃×防御','火を抱く盾：攻撃×溜撃×防御','守護者の重槍：攻撃×防御×対策','絶え間なき雫の盾：溜撃×溜撃×防御','再利用の防壁：防御×重鎧×腐蝕','防御×腐蝕'].includes(card.name)) {
+        card.shields = 1;
+      } else if (card.name === '棘の二重防壁：攻撃×防御×防御') {
+        card.shields = 2;
+      } else if (card.name === '三層の鉄壁：防御×防御×重鎧') {
+        card.shields = 3;
+      }
+
+      // 即時効果
+      if (card.name === '腐蝕') {
+        const victim = oppP.field.find(id => CARD_DEFS[getCard(state, id).name].system !== 'offering');
+        if (victim) destroyFieldCard(state, victim, false);
+        p.field = p.field.filter(id => id !== card.uid);
+        card.zone = `field_${opp}`;
+        oppP.field.push(card.uid);
+        addLog(state, `《腐蝕》は相手の場に送り込まれた`);
+      } else if (card.name === '攻撃×腐蝕') {
+        const victim = oppP.field.find(id => CARD_DEFS[getCard(state, id).name].system !== 'offering');
+        if (victim) destroyFieldCard(state, victim, false);
+        [...p.field, ...oppP.field].forEach(id => {
+          if (id === card.uid) return;
+          const n = getCard(state, id).name;
+          if (n.includes('対策') || n.includes('腐蝕')) destroyFieldCard(state, id, false);
+        });
+        sendCardToGrave(state, card.uid);
+      } else if (card.name === '対策×腐蝕') {
+        const victim = oppP.field.find(id => CARD_DEFS[getCard(state, id).name].system !== 'offering');
+        if (victim) destroyFieldCard(state, victim, false);
+        dealDamage(state, side, 1, { sourceSide: side, sourceCard: card, label: '《対策×腐蝕》自傷' });
+        sendCardToGrave(state, card.uid);
+      } else if (card.name === '重鎧×腐蝕') {
+        if (p.hand.length > 0) sendCardToGrave(state, p.hand.pop());
+        const victim = oppP.field.find(id => CARD_DEFS[getCard(state, id).name].system !== 'offering');
+        if (victim) {
+          oppP.field = oppP.field.filter(id => id !== victim);
+          const vCard = getCard(state, victim);
+          vCard.zone = `hand_${side}`;
+          vCard.shields = 0;
+          p.hand.push(victim);
+          addLog(state, `《重鎧×腐蝕》で相手の《${vCard.name}》を奪取し手札に加えた！`);
+        }
+        sendCardToGrave(state, card.uid);
+      } else if (card.name === '終末の更地：攻撃×防御×腐蝕') {
+        [...p.field, ...oppP.field].forEach(id => {
+          if (id !== card.uid) destroyFieldCard(state, id, false);
+        });
+        p.field = p.field.filter(id => id !== card.uid);
+        card.zone = `field_${opp}`;
+        oppP.field.push(card.uid);
+      } else if (card.name === '戦略的全破壊：溜撃×溜撃×重鎧') {
+        [...p.field, ...oppP.field].forEach(id => {
+          if (id === card.uid) return;
+          const attrs = CARD_DEFS[getCard(state, id).name].attrs;
+          if (attrs.some(a => ['攻撃','溜撃','防御','重鎧'].includes(a))) destroyFieldCard(state, id, false);
+        });
+        sendCardToGrave(state, card.uid);
+      } else if (card.name === '完全再生の聖鎧：溜撃×重鎧×重鎧') {
+        p.hp = 13;
+        sendCardToGrave(state, card.uid);
+      } else if (card.name === '命運の調律者：攻撃×対策×腐蝕') {
+        if (Math.abs(oppP.hp - 7) >= Math.abs(p.hp - 7)) oppP.hp = 7;
+        else p.hp = 7;
+        sendCardToGrave(state, card.uid);
+      } else if (card.name === '赤き脅威の断絶：溜撃×対策×腐蝕') {
+        [...oppP.field].forEach(id => {
+          const attrs = CARD_DEFS[getCard(state, id).name].attrs;
+          if (attrs.includes('攻撃') || attrs.includes('溜撃')) destroyFieldCard(state, id, false);
+        });
+        sendCardToGrave(state, card.uid);
+      } else if (card.name === '記憶のサルベージ：防御×対策×対策') {
+        if (p.hand.length > 0) sendCardToGrave(state, p.hand.pop());
+        if (state.discard.length > 0) {
+          const recUid = state.discard.shift();
+          const recCard = getCard(state, recUid);
+          recCard.zone = `hand_${side}`;
+          p.hand.push(recUid);
+          addLog(state, `《記憶のサルベージ》で共有捨て札から《${recCard.name}》を回収`);
+        } else {
+          drawCard(state, side);
+        }
+        sendCardToGrave(state, card.uid);
+      } else if (card.name === '時限式穿孔爆弾：溜撃×溜撃×対策') {
+        dealDamage(state, side, 1, { sourceSide: side, sourceCard: card, isPiercing: true, label: '時限爆弾即時' });
+        dealDamage(state, opp, 1, { sourceSide: side, sourceCard: card, isPiercing: true, label: '時限爆弾即時' });
+      }
+    }
+
+    // =========================================================================
+    // 10. CPU判断ロジック（第11章 優先順位表・仮想順位準拠）
+    // =========================================================================
+    function cpuActionPriority(state, action) {
+      if (action.virtualPriority !== undefined) return action.virtualPriority;
+      if (action.type === 'play_hand') return CARD_DEFS[getCard(state, action.uid).name].priority ?? 50;
+      return 50;
+    }
+
+    function chooseCpuAction(state, side) {
+      const actions = getLegalActions(state, side);
+      if (actions.length === 1) return actions[0];
+      const p = state.players[side];
+      const opp = 1 - side;
+      const oppP = state.players[opp];
+      const byPriority = list => [...list].sort((a,b) => cpuActionPriority(state,a)-cpuActionPriority(state,b))[0];
+
+      // 11-1：勝利確定を敗北回避より先に判定する。実際の効果処理を複製状態で評価する。
+      const winning = actions.filter(action => {
+        const trial = JSON.parse(JSON.stringify(state));
+        executeAction(trial, side, action);
+        return checkWinCondition(trial) && trial.winner === side;
+      });
+      if (winning.length) return byPriority(winning);
+
+      // 11-1：相手の《迎撃の警戒網》があり、自HP3以下なら攻撃名カードを候補から除外。
+      let filtered = [...actions];
+      if (oppP.hp > 3 && p.hp <= 3 && oppP.field.some(id => getCard(state,id).name === '迎撃の警戒網：防御×防御×対策')) {
+        const safe = filtered.filter(a => {
+          if (a.type === 'play_hand' && (getCard(state,a.uid).name.includes('攻撃') || getCard(state,a.uid).name.includes('溜撃'))) return false;
+          if (a.type === 'offering_generate' && a.targetOffName.includes('攻撃')) return false;
+          return true;
+        });
+        if (safe.length) filtered = safe;
+      }
+
+      // 神の招来はフリーアクション。緊急性が低く、対応する下位供物を生成できる場合だけバフ待ちする。
+      const summon = filtered.find(a => a.type === 'summon');
+      if (summon) {
+        const wantedBuff = summon.targetGod === '完全再生の聖鎧：溜撃×重鎧×重鎧'
+          ? '供物×防御'
+          : (summon.targetGod === '命運の調律者：攻撃×対策×腐蝕' || summon.targetGod === '最後の保険：防御×対策×腐蝕')
+            ? '供物×対策' : null;
+        const buffAction = wantedBuff && p.hp >= 5
+          ? filtered.find(a => a.type === 'offering_generate' && a.targetOffName === wantedBuff)
+          : null;
+        if (buffAction) return buffAction;
+        return summon;
+      }
+
+      // 次の相手開始フェイズで敗北するかを、現在盤面の複製で確認。
+      let nextStartLethal = false;
+      try {
+        const trial = JSON.parse(JSON.stringify(state));
+        trial.activeSide = opp;
+        trial.turn += 1;
+        runStartPhase(trial);
+        nextStartLethal = checkWinCondition(trial) && trial.winner === opp;
+      } catch (_) { nextStartLethal = false; }
+
+      // 11-5 条件例外①②：敗北直前、または自HP4以下なら防御カードを最優先。
+      if (nextStartLethal || p.hp <= 4) {
+        const defense = filtered.filter(a => a.type === 'play_hand' && getCard(state,a.uid).name.includes('防御'));
+        if (defense.length) return byPriority(defense);
+      }
+
+      // 11-5 条件例外③：相手HP6以下なら攻撃カードを最優先。
+      if (oppP.hp <= 6) {
+        const attack = filtered.filter(a => a.type === 'play_hand' && getCard(state,a.uid).name.includes('攻撃'));
+        if (attack.length) return byPriority(attack);
+      }
+
+      // 11-5 条件例外④：相手場に破壊対象クラスA～Dがある場合、破壊効果カードを優先。
+      const hasDestroyTarget = oppP.field.some(uid => ['A','B','C','D'].includes(CARD_DEFS[getCard(state,uid).name].classRank));
+      if (hasDestroyTarget) {
+        const destroyers = filtered.filter(a => a.type === 'play_hand' && CARD_DEFS[getCard(state,a.uid).name].summary.includes('破壊'));
+        if (destroyers.length) return byPriority(destroyers);
+      }
+
+      return byPriority(filtered);
+    }
+
+    // =========================================================================
+    // 11. ターン進行ループ（プレイヤー操作 → CPU自動実行 → 次プレイヤー入力待ち）
+    // =========================================================================
+    function handlePlayerAction(index) {
+      if (!G || G.phase === 'gameover') return;
+      const actions = getLegalActions(G, G.humanSide);
+      const chosen = actions[index];
+      if (!chosen) return;
+
+      // Undo用に現在状態をスナップショット保存
+      HISTORY.push(JSON.stringify(G));
+      if (HISTORY.length > 40) HISTORY.shift();
+
+      addLog(G, `【プレイヤー選択】${chosen.type}${chosen.uid ? `／《${getCard(G, chosen.uid).name}》` : ''}`);
+      const res = executeAction(G, G.humanSide, chosen);
+      if (checkWinCondition(G)) {
+        render();
+        return;
+      }
+
+      // フリーアクション（行動権消費なし）だった場合は、引き続きプレイヤーの行動フェイズ継続
+      if (!res.consumesAction) {
+        checkIntegrity(G);
+        render();
+        return;
+      }
+
+      // プレイヤーのターン終了 → 相手（CPU）のターン実行 → プレイヤーの次ターン開始・ドローまで自動進行
+      advanceUntilHumanTurn();
+      render();
+    }
+
+    function finishActiveTurn(state) {
+      const curSide = state.activeSide;
+      [...state.players[curSide].field].forEach(uid => {
+        if (getCard(state, uid).name === '腐蝕') {
+          sendCardToGrave(state, uid);
+          addLog(state, `ターン終了時、場の《腐蝕》が自壊`);
+        }
+      });
+      checkIntegrity(state);
+      recordTurnEnd(state);
+    }
+
+    function runCpuActionPhase(state, side) {
+      let freeActions = 0;
+      while (state.phase !== 'gameover') {
+        const actions = getLegalActions(state, side);
+        const action = chooseCpuAction(state, side) || actions[0];
+        if (!action) throw new Error(`CPU行動が選択できない: side=${side}`);
+        addLog(state, `【CPU選択】${action.type}${action.uid ? ` / ${getCard(state, action.uid).name}` : ''}`);
+        const result = executeAction(state, side, action);
+        if (checkWinCondition(state)) break;
+        if (result.consumesAction) break;
+        freeActions++;
+        if (freeActions > state.cards.length) throw new Error('物理カード総数を超えるフリーアクションが発生（処理循環の疑い）');
+      }
+    }
+
+    function advanceUntilHumanTurn() {
+      while (G.phase !== 'gameover') {
+        finishActiveTurn(G);
+        if (G.phase === 'gameover') break;
+        G.turn += 1;
+        G.activeSide = 1 - G.activeSide;
+        if (!beginActiveTurn(G)) break;
+        if (G.activeSide === G.humanSide) break;
+        runCpuActionPhase(G, G.activeSide);
+        if (G.phase === 'gameover') break;
+      }
+    }
+
+    // =========================================================================
+    // 12. 描画ロジック（ver.2.4 厳密準拠）
+    // =========================================================================
+    function getChipClasses(cardName) {
+      const def = CARD_DEFS[cardName];
+      const sysClass = def.system === 'alchemy' ? 'sys-alchemy' : (def.system === 'offering' ? 'sys-offering' : 'sys-base');
+      const primaryColor = ATTR_TO_COLOR[def.attrs[0]];
+      let fillClass = 'fill-multi';
+      if (def.system === 'alchemy') fillClass = 'fill-gold';
+      else if (def.system === 'offering') fillClass = 'fill-crimson';
+      else if (primaryColor === 'red') fillClass = 'fill-red';
+      else if (primaryColor === 'white') fillClass = 'fill-pink';
+      else if (primaryColor === 'black') fillClass = 'fill-purple';
+      return `chip-card ${fillClass} ${sysClass}`;
+    }
+
+    function renderCardChip(uid, extraNote = '') {
+      const c = getCard(G, uid);
+      const noteHtml = extraNote ? `<span class="text-[10px] text-slate-300 font-semibold">${extraNote}</span>` : '';
+      return `
+        <button type="button" class="${getChipClasses(c.name)} shrink-0" onclick="showCardDetail(${uid})">
+          <span>${getColorDot(c.name)}</span>
+          <span>《${formatColoredCardName(c.name)}》</span>
+          ${noteHtml}
+        </button>
+      `;
+    }
+
+    function renderCauldronRow(side) {
+      const p = G.players[side];
+      const caul = p.cauldrons[0];
+      const maxSlots = 1 + caul.upgrades.filter(id => getCard(G, id).name.includes('腐蝕')).length;
+      const upgText = caul.upgrades.length > 0 ? caul.upgrades.map(id => getCard(G, id).name).join('・') : 'なし';
+      const attText = caul.attachments.length > 0 ? caul.attachments.map(id => `${CARD_DEFS[getCard(G, id).name].label}${caul.attachmentActive[id] ? '(済)' : '(未)'}`).join('・') : 'なし';
+      const cntText = caul.contents.length > 0 ? caul.contents.map(id => `${getCard(G, id).name}${getCard(G, id).reservedProduct ? '[予約]' : ''}`).join('・') : 'なし';
+      const extraPots = p.cauldrons.length > 1 ? ` ＋ 第2器(枠${p.cauldrons[1].contents.length}/1)` : '';
+      const shelfText = p.shelf ? ` ｜ 保管棚(${p.shelf.contents.length}/1)` : '';
+
+      return `
+        <div class="alchemy-wide-row overflow-x-auto">
+          <span class="text-[#eab308] font-bold shrink-0">🟡 錬成釜：</span>
+          <button type="button" class="chip-card fill-gold sys-alchemy alchemy-wide-chip whitespace-nowrap" onclick="showCauldronDetail(${side})">
+            <span class="inline-flex items-center gap-1">
+              <span>🟡</span>
+              <span style="color:#eab308">《錬成》</span>
+            </span>
+            <span class="font-bold text-slate-100 ml-2">（枠 ${caul.contents.length}/${maxSlots} ｜ 強化：${upgText} ｜ 付属：${attText} ｜ 中身：${cntText}${extraPots}${shelfText}）</span>
+          </button>
+        </div>
+      `;
+    }
+
+    function renderPlayerBlock(side, isOpponent) {
+      const p = G.players[side];
+      const turnBadge = side === 0
+        ? `<span class="font-extrabold px-1.5 py-0 rounded bg-indigo-600 text-white">先攻</span>`
+        : `<span class="font-extrabold px-1.5 py-0 rounded bg-slate-700 text-slate-200">後攻</span>`;
+
+      let handHtml = '';
+      if (!isOpponent || PUBLIC_MODE) {
+        handHtml = p.hand.length > 0
+          ? p.hand.map(uid => renderCardChip(uid)).join('<span class="text-slate-500 text-xs">、</span>')
+          : '<span class="text-slate-400">0枚</span>';
+      } else {
+        handHtml = `<strong class="text-white">${p.hand.length}枚</strong><span class="text-slate-400 text-[11px]">（非公開）</span>`;
+      }
+
+      const fieldHtml = p.field.length > 0
+        ? p.field.map(uid => {
+            const c = getCard(G, uid);
+            const notes = [];
+            if (c.shields > 0) notes.push(`盾${c.shields}`);
+            if (c.whiteBuffAura) notes.push(`白バフ無敵`);
+            if (['攻撃','溜撃','攻撃×防御','攻撃×重鎧','攻撃×対策','溜撃×対策','燃え尽きる重砲：攻撃×攻撃×重鎧','二連の穿孔撃：攻撃×攻撃×対策','自らを削る貫き：攻撃×対策×対策'].includes(c.name) && !c.onceUsed) {
+              notes.push(`予約`);
+            }
+            if (c.stackedCards.length > 0) notes.push(`重ね${c.stackedCards.length}`);
+            return renderCardChip(uid, notes.length ? `(${notes.join('/')})` : '');
+          }).join(' ')
+        : '<span class="text-slate-400">なし</span>';
+
+      return `
+        <!-- 上段1行 -->
+        <div class="flex items-center justify-between gap-2 border-b border-slate-700/80 pb-0.5 whitespace-nowrap">
+          <div class="flex items-center gap-1 overflow-x-auto text-xs text-slate-300">
+            <span class="shrink-0">手札：</span>
+            ${handHtml}
+          </div>
+          <div class="flex items-center gap-1.5 text-xs shrink-0">
+            ${isOpponent ? '<span class="font-bold text-slate-300">相手</span>' : ''}
+            ${turnBadge}
+            <span class="text-slate-500">｜</span>
+            <span class="text-slate-300 font-bold">HP: <strong class="text-sm font-black text-white">${p.hp}</strong> <span class="text-slate-400 font-normal">/ 13</span></span>
+          </div>
+        </div>
+
+        <!-- 通常の場 -->
+        <div class="flex flex-wrap items-center gap-1.5 text-xs">
+          <span class="text-slate-400 shrink-0">場：</span>
+          ${fieldHtml}
+        </div>
+
+        <!-- 拡張領域（供物置き場・錬成釜） -->
+        <div class="space-y-1 text-xs">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="text-[#fb7185] font-bold shrink-0">🩸 供物置き場：</span>
+            <button type="button" class="chip-card fill-crimson sys-offering" onclick="showCardDetail(${p.altarUid})">
+              <span>🩸</span>
+              <span style="color:#fb7185">《供物》</span>
+              <span class="font-semibold text-slate-200">（祭壇）</span>
+            </button>
+          </div>
+          ${renderCauldronRow(side)}
+        </div>
+      `;
+    }
+
+    function render() {
+      const oppSide = 1 - G.humanSide;
+
+      // 1. 共有領域
+      const discardSummary = G.discard.length > 0
+        ? `（上：${G.discard.slice(0, 4).map(id => getCard(G, id).name).join('・')}${G.discard.length > 4 ? '…' : ''}）`
+        : '';
+      document.getElementById('sharedZone').innerHTML = `
+        <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-slate-200">
+          <button type="button" onclick="showSharedDetail()" class="text-left hover:underline">
+            <span>共有デッキ：<strong class="text-white">${G.deck.length}枚</strong></span>
+            <span class="text-slate-500">／</span>
+            <span>共有捨て札：<strong class="text-white">${G.discard.length}枚</strong><span class="text-slate-400">${discardSummary}</span></span>
+            <span class="text-slate-500">／</span>
+            <span>
+              待機在庫：基本 <strong class="text-white">${G.standbyBase.length}枚</strong> ｜
+              🟡<span class="text-[#eab308] font-bold">錬成</span> <strong class="text-[#eab308]">${G.standbyAlc.length}枚</strong> ｜
+              🩸<span class="text-[#fb7185] font-bold">供物</span> <strong class="text-[#fb7185]">${G.standbyOff.length}枚</strong>
+              <span class="text-slate-400 ml-1">[乱数位置:${G.rngPos}]</span>
+            </span>
+          </button>
+        </div>
+      `;
+
+      // 2. 相手パネル & 3. 自分パネル
+      document.getElementById('oppPanel').innerHTML = renderPlayerBlock(oppSide, true);
+      document.getElementById('mePanel').innerHTML = renderPlayerBlock(G.humanSide, false);
+
+      // 4. 行動選択肢
+      const sideLabel = G.humanSide === 0 ? '先攻' : '後攻';
+      document.getElementById('lastStepSummary').textContent = G.lastSummary;
+      const actionListEl = document.getElementById('actionList');
+
+      if (G.phase === 'gameover') {
+        const isHumanWin = G.winner === G.humanSide;
+        document.getElementById('phaseHeading').textContent = `試合終了（第${G.turn}ターン）`;
+        actionListEl.innerHTML = `
+          <div class="rounded-lg border ${isHumanWin ? 'border-emerald-500 bg-emerald-950/50' : 'border-rose-500 bg-rose-950/50'} p-3 text-center space-y-2">
+            <div class="text-base font-black ${isHumanWin ? 'text-emerald-300' : 'text-rose-300'}">
+              ${isHumanWin ? '🏆 あなたの勝利！' : '💀 相手の勝利…'}（${G.winner === 0 ? '先攻' : '後攻'}勝利）
+            </div>
+            <div class="text-xs text-slate-300">理由：${G.winReason} ／ 最終HP：あなた ${G.players[G.humanSide].hp} vs 相手 ${G.players[oppSide].hp}</div>
+            <button type="button" onclick="startNewGame()" class="px-4 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs">同じ乱数位置で再戦する</button>
+          </div>
+        `;
+      } else {
+        document.getElementById('phaseHeading').textContent = `第${G.turn}ターン・行動フェイズ（${sideLabel}）`;
+        const actions = getLegalActions(G, G.humanSide);
+        actionListEl.innerHTML = actions.map((act, idx) => {
+          const num = idx + 1;
+          if (act.isThreeLine) {
+            return `
+              <button type="button" onclick="handlePlayerAction(${idx})" class="action-item w-full text-left rounded border border-slate-700/80 bg-[#0f172a]/85 px-2 py-1 flex items-start gap-1.5">
+                <span class="font-extrabold text-slate-300 shrink-0">${num}.</span>
+                <div class="leading-snug space-y-0.5 min-w-0">
+                  <div>${act.line1}</div>
+                  <div class="text-[11px] text-slate-300 pl-2">${act.line2}</div>
+                  <div class="text-[11px] text-slate-300 pl-2">${act.line3}</div>
+                </div>
+              </button>
+            `;
+          }
+          return `
+            <button type="button" onclick="handlePlayerAction(${idx})" class="action-item w-full text-left rounded border border-slate-700/80 bg-[#0f172a]/85 px-2 py-1 flex items-start gap-1.5">
+              <span class="font-extrabold text-slate-300 shrink-0">${num}.</span>
+              <span class="leading-snug">${act.html}</span>
+            </button>
+          `;
+        }).join('');
+      }
+
+      // 検証ツールバー状態更新
+      document.getElementById('btnVisibility').textContent = `手札：${PUBLIC_MODE ? '公開' : '非公開'}`;
+      document.getElementById('btnSide').textContent = `あなた：${PLAYER_IS_FIRST ? '先攻' : '後攻'}`;
+      document.getElementById('btnUndo').disabled = HISTORY.length === 0;
+      document.getElementById('logContent').innerHTML = G.logs.map(l => `<div class="border-b border-slate-800/80 py-0.5">${l}</div>`).join('');
+    }
+
+    // =========================================================================
+    // 13. ポップアップ・検証ツール操作
+    // =========================================================================
+    function showCardDetail(uid) {
+      const c = getCard(G, uid);
+      const def = CARD_DEFS[c.name];
+      document.getElementById('detailTitle').innerHTML = `${getColorDot(c.name)}《${formatColoredCardName(c.name)}》`;
+      document.getElementById('detailSub').textContent = `物理ID:#${c.uid}(${c.displayId}) ／ 所属:${def.system} ／ 盾:${c.shields}`;
+      document.getElementById('detailDesc').textContent = def.summary;
+      document.getElementById('detailModal').classList.remove('hidden');
+    }
+
+    function showCauldronDetail(side) {
+      const p = G.players[side];
+      const lines = p.cauldrons.map((caul, i) => {
+        const upg = caul.upgrades.map(id => getCard(G, id).name).join(', ') || 'なし';
+        const att = caul.attachments.map(id => `${getCard(G, id).name}(${CARD_DEFS[getCard(state, id).name].label})`).join(', ') || 'なし';
+        const cnt = caul.contents.map(id => getCard(G, id).name).join(', ') || 'なし';
+        return `【第${i + 1}釜】器:${getCard(G, caul.potUid).name} ／ 強化:${upg} ／ 付属:${att} ／ 中身:${cnt}`;
+      });
+      if (p.shelf) {
+        lines.push(`【保管棚】中身:${p.shelf.contents.map(id => getCard(G, id).name).join(', ') || 'なし'}`);
+      }
+      document.getElementById('detailTitle').textContent = `🟡 ${side === 0 ? '先攻' : '後攻'}の錬成領域詳細`;
+      document.getElementById('detailSub').textContent = `全${p.cauldrons.length}器`;
+      document.getElementById('detailDesc').textContent = lines.join('\n');
+      document.getElementById('detailModal').classList.remove('hidden');
+    }
+
+    function showSharedDetail() {
+      const discardList = G.discard.length > 0 ? G.discard.map((id, i) => `${i + 1}. ${getCard(G, id).displayId}`).join(' / ') : 'なし';
+      const deckInfo = PUBLIC_MODE ? G.deck.map(id => getCard(G, id).displayId).join(' / ') : `非公開（残り${G.deck.length}枚）`;
+      document.getElementById('detailTitle').textContent = '共有領域・待機在庫詳細';
+      document.getElementById('detailSub').textContent = `乱数位置:${G.rngPos}`;
+      document.getElementById('detailDesc').textContent =
+        `【共有捨て札（上から順）】${discardList}\n` +
+        `【共有デッキ】${deckInfo}\n` +
+        `【待機残数】基本:${G.standbyBase.length}枚 ／ 錬成:${G.standbyAlc.length}枚 ／ 供物:${G.standbyOff.length}枚`;
+      document.getElementById('detailModal').classList.remove('hidden');
+    }
+
+    function closeDetail() {
+      document.getElementById('detailModal').classList.add('hidden');
+    }
+
+    function togglePublicMode() {
+      PUBLIC_MODE = !PUBLIC_MODE;
+      render();
+    }
+
+    function togglePlayerFirst() {
+      PLAYER_IS_FIRST = !PLAYER_IS_FIRST;
+      startNewGame();
+    }
+
+    function toggleLog() {
+      document.getElementById('logDrawer').classList.toggle('hidden');
+    }
+
+    function undoStep() {
+      if (HISTORY.length === 0) return;
+      G = JSON.parse(HISTORY.pop());
+      closeDetail();
+      render();
+    }
+
+    function startNewGame() {
+      HISTORY = [];
+      closeDetail();
+      const rngStart = document.getElementById('rngStartInput').value;
+      G = initGame(rngStart, PLAYER_IS_FIRST);
+      beginActiveTurn(G);
+      if (!PLAYER_IS_FIRST && G.phase !== 'gameover') {
+        runCpuActionPhase(G, 0);
+        if (G.phase !== 'gameover') advanceUntilHumanTurn();
+      }
+      render();
+    }
+
+    window.onload = function () {
+      startNewGame();
+    };
+  </script>
+</body>
+</html>

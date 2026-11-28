@@ -1,0 +1,27 @@
+# 錬成ロゴ製作台帳（2026-11-28、全16種採用済み）
+
+保存先は全て ~/workspace/user/rensei-icons/。画風は金の円環エンブレム＋黒背景＋描き込みのあるダークファンタジー調、文字なし。
+
+## 基本（1種）
+- 《錬成釜：錬成》 — media-generation-rensei-kama-hd-0-9047f641-3cd0-429f-ba8a-0848f744d05d.webp
+
+## 超越（6種）
+- 《賢者の炉：錬成×攻撃×攻撃》 — media-generation-rensei-kenja-hd-0-91eda032-0483-459b-9221-26af239b7cf4.webp
+- 《第二の釜：錬成×攻撃×防御》 — media-generation-rensei-daini-hd-0-53925b8e-7a08-4c97-868f-96f53623c660.webp
+- 《変化の触媒：錬成×攻撃×対策》 — media-generation-rensei-shokubai-hd-0-e1c423f6-a698-4215-9d23-51d8d0cf1a4d.webp
+- 《安全弁：錬成×防御×防御》 — media-generation-rensei-safety-hd-0-b9437c68-e667-40e5-88d4-b6ef0b51c9e5.webp
+- 《保管棚：錬成×防御×対策》 — media-generation-rensei-shelf-hd-0-3c821f0f-839f-4bda-a9ee-6068463b61e5.webp
+- 《対抗薬：錬成×対策×対策》 — media-generation-rensei-antidote-hd-0-97de2da5-1e66-4036-8752-2c046da576ad.webp
+
+## 錬成品（3種、先行して採用済み）
+- 《轟く雷粉：錬成攻撃》 — media-generation-rensei-attack-hd-0-243ccc39-9136-4dce-919a-946f6b59c046.webp
+- 《不壊の霊薬：錬成防御》 — media-generation-rensei-defense-hd-0-ab051f5e-8432-492c-9c4d-77a0a0f7faab.webp
+- 《アルカヘスト：錬成対策》 — media-generation-rensei-counter-hd-0-6e3041ca-089e-4854-b63e-787dc7c4207e.webp
+
+## 釜強化（6種）
+- 《硫黄の素：錬成×溜撃》 — media-generation-rensei-sulfur-hd-0-bf9e15f3-54cc-4cab-b180-f69b0ddd79ce.webp
+- 《塩の素：錬成×重鎧》 — media-generation-rensei-salt-hd-0-806fcd83-e68c-45d7-b045-e5049a6fa826.webp
+- 《水銀の素：錬成×腐蝕》 — media-generation-rensei-mercury-hd-0-871006cd-3828-45e9-9dec-29bbf7b027f0.webp
+- 《硫黄と塩：錬成×溜撃×重鎧》 — media-generation-rensei-sulfur-salt-hd-0-74bbade9-399d-4f0c-9a23-adf1e34933fd.webp
+- 《硫黄と水銀：錬成×溜撃×腐蝕》 — media-generation-rensei-sulfur-mercury2-hd-0-e490b8d1-1179-48aa-b940-23d5402f0d3c.webp（初版 media-generation-rensei-sulfur-mercury-hd-0-0bc90c6d-… は黄色が弱く不採用）
+- 《塩と水銀：錬成×重鎧×腐蝕》 — media-generation-rensei-salt-mercury-hd-0-027b6f88-f897-4e75-bdc4-41ab09c4e63d.webp
